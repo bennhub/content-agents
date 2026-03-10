@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+
+*.mp4
+*.mov
+*.m4v
+*.avi
+*.mkv
+
+demo_splurge/
+final_test/
+quick_test/
+bpm_120_test/
+premiere_test/
