@@ -212,9 +212,11 @@ def build_xml(project_name: str, output_dir: Path, timing: TimingSpec, scene_cou
 
         clipitem = SubElement(track, "clipitem", id=clip_id)
         make_text_element(clipitem, "name", f"{clip_id}.mp4")
+        make_text_element(clipitem, "duration", str(timing.frames_per_scene))
 
         file_element = SubElement(clipitem, "file", id=f"file_{scene_number:02d}")
         make_text_element(file_element, "name", f"{clip_id}.mp4")
+        make_text_element(file_element, "duration", str(timing.frames_per_scene))
         file_rate = SubElement(file_element, "rate")
         make_text_element(file_rate, "timebase", str(TIMEBASE))
         make_text_element(file_rate, "ntsc", "TRUE")
@@ -222,6 +224,9 @@ def build_xml(project_name: str, output_dir: Path, timing: TimingSpec, scene_cou
         media2 = SubElement(file_element, "media")
         video2 = SubElement(media2, "video")
         sample_characteristics2 = SubElement(video2, "samplecharacteristics")
+        rate3 = SubElement(sample_characteristics2, "rate")
+        make_text_element(rate3, "timebase", str(TIMEBASE))
+        make_text_element(rate3, "ntsc", "TRUE")
         make_text_element(sample_characteristics2, "width", str(FRAME_WIDTH))
         make_text_element(sample_characteristics2, "height", str(FRAME_HEIGHT))
 
