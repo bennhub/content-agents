@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
+import subprocess
 import shutil
 from fractions import Fraction
 from pathlib import Path
@@ -12,7 +14,6 @@ from orchestrate_splurge import (
     DEFAULT_BEATS_PER_BAR,
     FRAME_HEIGHT,
     FRAME_WIDTH,
-    PLACEHOLDER_MASTER_PATH,
     SCENE_COUNT,
     TimingSpec,
     build_prompt,
@@ -24,6 +25,7 @@ from orchestrate_splurge import (
 
 FCPXML_VERSION = "1.5"
 FRAME_DURATION = Fraction(1001, 24000)
+EXPECTED_SCENE_FILES = tuple(f"scene_{index:02d}.mp4" for index in range(1, SCENE_COUNT + 1))
 
 
 def parse_args() -> argparse.Namespace:
@@ -33,6 +35,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--lyrics", required=True, help="Raw lyrics text or a path to a text file.")
     parser.add_argument("--bpm", required=True, type=float, help="Song tempo in beats per minute.")
     parser.add_argument("--project_name", required=True, help="Folder and sequence naming prefix.")
+    parser.add_argument(
+        "--input_dir",
+        required=True,
+        help="Folder containing scene_01.mp4 through scene_06.mp4 for the FCPXML timeline.",
+    )
     parser.add_argument(
         "--beats_per_bar",
         type=int,
@@ -62,13 +69,67 @@ def fcpx_time_from_seconds(seconds: float) -> str:
     return f"{value.numerator}/{value.denominator}s"
 
 
-def make_text_element(parent: Element, tag: str, text: str) -> Element:
-    element = SubElement(parent, tag)
-    element.text = text
-    return element
+def get_media_duration_seconds(path: Path) -> float:
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-print_format",
+                "json",
+                "-show_format",
+                str(path),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError as exc:
+        raise SystemExit("Error: ffprobe is required to inspect source clip durations.") from exc
+    except subprocess.CalledProcessError as exc:
+        message = exc.stderr.strip() or exc.stdout.strip() or "unknown ffprobe error"
+        raise SystemExit(f"Error: could not inspect duration for {path.name}: {message}") from exc
+
+    try:
+        payload = json.loads(result.stdout)
+        duration = float(payload["format"]["duration"])
+    except (KeyError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"Error: ffprobe returned an unreadable duration for {path.name}.") from exc
+
+    if duration <= 0:
+        raise SystemExit(f"Error: {path.name} has a non-positive duration.")
+    return duration
 
 
-def build_fcpxml(project_name: str, output_dir: Path, timing: TimingSpec, scene_count: int = SCENE_COUNT) -> str:
+def validate_input_scenes(input_dir: Path, timing: TimingSpec) -> list[tuple[Path, float]]:
+    if not input_dir.exists() or not input_dir.is_dir():
+        raise SystemExit(f"Error: input directory not found: {input_dir}")
+
+    required_duration = timing.seconds_per_scene
+    scene_sources: list[tuple[Path, float]] = []
+    for file_name in EXPECTED_SCENE_FILES:
+        scene_path = input_dir / file_name
+        if not scene_path.exists() or not scene_path.is_file():
+            raise SystemExit(f"Error: missing required input clip: {scene_path}")
+
+        duration_seconds = get_media_duration_seconds(scene_path)
+        if duration_seconds + 0.001 < required_duration:
+            raise SystemExit(
+                f"Error: {scene_path.name} is too short ({duration_seconds:.2f}s). "
+                f"Required minimum is {required_duration:.2f}s."
+            )
+        scene_sources.append((scene_path, duration_seconds))
+
+    return scene_sources
+
+
+def build_fcpxml(
+    project_label: str,
+    output_dir: Path,
+    timing: TimingSpec,
+    scene_sources: list[tuple[Path, float]],
+) -> str:
     fcpxml = Element("fcpxml", version=FCPXML_VERSION)
     resources = SubElement(fcpxml, "resources")
     SubElement(
@@ -82,19 +143,17 @@ def build_fcpxml(project_name: str, output_dir: Path, timing: TimingSpec, scene_
         fieldOrder="progressive",
     )
 
-    asset_duration = fcpx_time_from_frames(timing.frames_per_scene)
-    for index in range(scene_count):
-        scene_number = index + 1
-        clip_id = f"scene_{scene_number:02d}"
+    for index, (_, source_duration) in enumerate(scene_sources, start=1):
+        clip_id = f"scene_{index:02d}"
         scene_path = (output_dir / f"{clip_id}.mp4").resolve().as_uri()
         SubElement(
             resources,
             "asset",
-            id=f"r{scene_number + 1}",
+            id=f"r{index + 1}",
             name=f"{clip_id}.mp4",
             src=scene_path,
             start="0s",
-            duration=asset_duration,
+            duration=fcpx_time_from_seconds(source_duration),
             hasVideo="1",
             hasAudio="1",
             format="r1",
@@ -104,8 +163,8 @@ def build_fcpxml(project_name: str, output_dir: Path, timing: TimingSpec, scene_
         )
 
     library = SubElement(fcpxml, "library")
-    event = SubElement(library, "event", name=f"{project_name} Event")
-    project = SubElement(event, "project", name=project_name)
+    event = SubElement(library, "event", name=f"{project_label} Event")
+    project = SubElement(event, "project", name=project_label)
     sequence = SubElement(
         project,
         "sequence",
@@ -118,14 +177,13 @@ def build_fcpxml(project_name: str, output_dir: Path, timing: TimingSpec, scene_
     )
     spine = SubElement(sequence, "spine")
 
-    for index in range(scene_count):
-        scene_number = index + 1
-        clip_id = f"scene_{scene_number:02d}"
-        offset = fcpx_time_from_frames(index * timing.frames_per_scene)
+    for index, _scene_source in enumerate(scene_sources, start=1):
+        clip_id = f"scene_{index:02d}"
+        offset = fcpx_time_from_frames((index - 1) * timing.frames_per_scene)
         SubElement(
             spine,
             "video",
-            ref=f"r{scene_number + 1}",
+            ref=f"r{index + 1}",
             name=f"{clip_id}.mp4",
             offset=offset,
             start="0s",
@@ -136,32 +194,36 @@ def build_fcpxml(project_name: str, output_dir: Path, timing: TimingSpec, scene_
     return "\n".join(line for line in pretty.splitlines() if line.strip())
 
 
-def write_outputs(project_name: str, bpm: float, lyrics: str, timing: TimingSpec) -> tuple[Path, Path]:
+def write_outputs(
+    project_name: str,
+    bpm: float,
+    lyrics: str,
+    timing: TimingSpec,
+    input_dir: Path,
+) -> tuple[Path, Path]:
     output_dir = Path(project_name)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = output_dir.resolve()
-
-    if not PLACEHOLDER_MASTER_PATH.exists():
-        raise SystemExit(
-            "Error: placeholder_master.mp4 not found in root. Please add a test video file to continue."
-        )
+    project_label = output_dir.name
+    scene_sources = validate_input_scenes(input_dir.resolve(), timing)
 
     scenes = split_into_scenes(lyrics, SCENE_COUNT)
     prompts_path = output_dir / "prompts.txt"
-    fcpxml_path = output_dir / f"{project_name}.fcpxml"
+    fcpxml_path = output_dir / f"{project_label}.fcpxml"
 
-    for index in range(1, SCENE_COUNT + 1):
+    for index, (source_path, _source_duration) in enumerate(scene_sources, start=1):
         scene_path = output_dir / f"scene_{index:02d}.mp4"
-        shutil.copyfile(PLACEHOLDER_MASTER_PATH, scene_path)
+        shutil.copyfile(source_path, scene_path)
 
     prompt_lines = [
-        f"Project: {project_name}",
+        f"Project: {project_label}",
         f"BPM: {bpm:.2f}",
         f"Time signature: {timing.beats_per_bar}/4",
         f"Bars per scene: {timing.bars_per_scene}",
         f"Beats per scene: {timing.beats_per_scene}",
         f"Scene length: {timing.seconds_per_scene:.2f}s",
         f"Frames per scene: {timing.frames_per_scene}",
+        f"Input directory: {input_dir.resolve()}",
         f"Timeline type: FCPXML {FCPXML_VERSION}",
         "",
     ]
@@ -171,15 +233,18 @@ def write_outputs(project_name: str, bpm: float, lyrics: str, timing: TimingSpec
         beat_end = index * timing.beats_per_scene
         bar_start = (index - 1) * timing.bars_per_scene + 1
         bar_end = index * timing.bars_per_scene
+        source_duration = scene_sources[index - 1][1]
         prompt_lines.append(f"[Scene {index:02d}]")
         prompt_lines.append(f"Lyric chunk: {scene_text}")
+        prompt_lines.append(f"Source clip: {scene_sources[index - 1][0].name}")
+        prompt_lines.append(f"Source duration: {source_duration:.2f}s")
         prompt_lines.append(f"Bar window: {bar_start} -> {bar_end}")
         prompt_lines.append(f"Beat window: {beat_start:.2f} -> {beat_end:.2f}")
         prompt_lines.append(build_prompt(scene_text, index, bpm, timing))
         prompt_lines.append("")
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
-    fcpxml_path.write_text(build_fcpxml(project_name, output_dir, timing), encoding="utf-8")
+    fcpxml_path.write_text(build_fcpxml(project_label, output_dir, timing, scene_sources), encoding="utf-8")
     return prompts_path, fcpxml_path
 
 
@@ -196,7 +261,13 @@ def main() -> None:
         raise SystemExit("bars_per_scene must be greater than 0.")
 
     timing = build_timing_spec(args.bpm, args.beats_per_bar, args.bars_per_scene)
-    prompts_path, fcpxml_path = write_outputs(args.project_name, args.bpm, lyrics, timing)
+    prompts_path, fcpxml_path = write_outputs(
+        args.project_name,
+        args.bpm,
+        lyrics,
+        timing,
+        Path(args.input_dir),
+    )
     print(f"Wrote prompts: {prompts_path}")
     print(f"Wrote FCPXML: {fcpxml_path}")
 
