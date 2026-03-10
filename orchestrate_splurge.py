@@ -218,7 +218,7 @@ def build_xml(project_name: str, output_dir: Path, timing: TimingSpec, scene_cou
         file_rate = SubElement(file_element, "rate")
         make_text_element(file_rate, "timebase", str(TIMEBASE))
         make_text_element(file_rate, "ntsc", "TRUE")
-        make_text_element(file_element, "pathurl", f"file://localhost/{clip_id}.mp4")
+        make_text_element(file_element, "pathurl", f"{clip_id}.mp4")
         media2 = SubElement(file_element, "media")
         video2 = SubElement(media2, "video")
         sample_characteristics2 = SubElement(video2, "samplecharacteristics")
