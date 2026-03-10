@@ -1,49 +1,47 @@
 # Content Agents
 
-`Content Agents` turns song lyrics and tempo into:
+`Content Agents` turns lyrics and tempo into a six-scene prompt package plus an edit timeline.
 
-- a six-scene visual treatment for AI video generation
-- a `prompts.txt` file for prompt-driven video workflows
-- a Premiere-compatible Final Cut Pro 7 XML (`.xml`) timeline
-- a Final Cut Pro FCPXML (`.fcpxml`) timeline
+This repo now has two separate workflows:
 
-There are now two separate generator scripts:
+- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py): Premiere/XMEML test workflow using one placeholder clip copied six times
+- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow using six real clips and a style-driven prompt system
 
-- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py): Premiere/XMEML workflow using six copied placeholder clips
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow using six real input clips from a folder
+## What The Project Produces
 
-## What Each Script Does
+Depending on the script you run, the project generates:
 
-### Premiere Test Workflow
+- `prompts.txt` with one descriptive prompt per scene
+- a six-clip edit timeline
+- copied scene media inside the output project folder
 
-[`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py) is the original test workflow.
+Timeline formats:
 
-It:
+- Premiere workflow: `.xml`
+- Final Cut Pro workflow: `.fcpxml`
 
-1. Reads lyrics and BPM.
-2. Splits the lyrics into 6 scenes.
-3. Calculates scene timing from BPM and bars.
-4. Generates one prompt per scene.
-5. Writes a Premiere-importable `.xml` timeline.
-6. Copies [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) to `scene_01.mp4` through `scene_06.mp4` so Premiere can place media immediately.
+## How Prompt Generation Works
 
-Use this when you want a quick placeholder timeline test in Premiere.
+Both workflows:
 
-### Final Cut Pro Real-Clip Workflow
+- read lyrics from inline text or a text file
+- split the lyrics into 6 scenes
+- calculate timing from BPM and bars
 
-[`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py) is the Final Cut Pro workflow.
+The Final Cut Pro workflow adds a creative layer:
 
-It:
+- it loads [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
+- it uses that file as a reusable director brief for every scene prompt
+- it changes the scene vibe based on lyric content
+- it varies camera language, lighting, color, and texture scene by scene
 
-1. Reads lyrics and BPM.
-2. Splits the lyrics into 6 scenes.
-3. Calculates scene timing from BPM and bars.
-4. Validates six real source clips from an input folder.
-5. Fails if any clip is shorter than the required scene length.
-6. Copies those six clips into the generated project folder.
-7. Writes a `.fcpxml` timeline that trims each clip to the beat-based scene duration.
+The current style brief is called `High-Motion LTX 2.3` and emphasizes:
 
-Use this when you want a real import test in Final Cut Pro with six distinct clips.
+- cinematic lighting
+- 4k-grade texture detail
+- tracking shots
+- low-angle framing
+- aggressive motion and editorially useful composition
 
 ## Shared Timing Model
 
@@ -60,12 +58,12 @@ Defaults:
 - `bars_per_scene = 2`
 - `scene_count = 6`
 
-Example at `120 BPM` in `4/4` with `2 bars per scene`:
+Example at `120 BPM`, `4/4`, `2 bars per scene`:
 
 - 1 beat = `0.5s`
 - 1 bar = `2.0s`
 - 2 bars = `4.0s`
-- each scene clip is placed as `4.0s`
+- each scene clip lands at `4.0s`
 - total timeline length is `24.0s`
 
 ## Requirements
@@ -73,7 +71,7 @@ Example at `120 BPM` in `4/4` with `2 bars per scene`:
 You need:
 
 - Python 3
-- `ffprobe` for the FCPXML real-clip workflow
+- `ffprobe` for the FCPXML workflow
 
 Check them with:
 
@@ -84,9 +82,18 @@ ffprobe -version
 
 No external Python packages are required.
 
-For the Premiere test workflow, you also need [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) in the repo root.
+Premiere test workflow only:
 
-## Project Structure
+- [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) must exist in the repo root
+
+## Project Files
+
+Main files:
+
+- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py)
+- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py)
+- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
+- [`premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/premiere_xml_logic.md)
 
 Current repo layout:
 
@@ -94,53 +101,36 @@ Current repo layout:
 Content-Agents/
 ├── orchestrate_splurge.py
 ├── orchestrate_splurge_fcpxml.py
+├── director_style_v1.md
 ├── placeholder_master.mp4
 ├── premiere_xml_logic.md
 └── README.md
 ```
 
-## Premiere Test Workflow
+## How To Run
 
-### Inputs
+Run commands from the repo root.
 
-`orchestrate_splurge.py` accepts:
+### 1. Premiere Test Workflow
 
-- `--lyrics`
-- `--bpm`
-- `--project_name`
-- `--beats_per_bar` default `4`
-- `--bars_per_scene` default `2`
+Use this when you want a quick timing/import test in Premiere with placeholder media.
 
-### Output
-
-It generates:
-
-- `prompts.txt`
-- `<project_name>.xml`
-- `scene_01.mp4` through `scene_06.mp4` copied from `placeholder_master.mp4`
-- `template_reference.txt`
-
-### Example Command
+Command:
 
 ```bash
 python3 orchestrate_splurge.py \
-  --lyrics "City lights burn through the haze
-We run until the skyline breaks
-Hands up in the static glow
-No sleep, no brakes, just let it show
-Crash the silence, start the fire
-We lift higher and higher" \
+  --lyrics lyrics.txt \
   --bpm 120 \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
-  --project_name demo_premiere
+  --project_name premiere_test
 ```
 
-### Example Output
+This creates:
 
 ```text
-demo_premiere/
-├── demo_premiere.xml
+premiere_test/
+├── premiere_test.xml
 ├── prompts.txt
 ├── scene_01.mp4
 ├── scene_02.mp4
@@ -151,27 +141,17 @@ demo_premiere/
 └── template_reference.txt
 ```
 
-### Notes
+What it does:
 
-- All six generated clips are copies of the same placeholder source.
-- This is intended for timing/import testing, not a real six-clip edit.
+- copies `placeholder_master.mp4` to all six scene files
+- writes a Premiere-importable XMEML timeline
+- writes six prompts based on the lyrics
 
-## Final Cut Pro Real-Clip Workflow
+### 2. Final Cut Pro Real Workflow
 
-### Inputs
+Use this when you want a real six-clip import test in Final Cut Pro.
 
-`orchestrate_splurge_fcpxml.py` accepts:
-
-- `--input_dir`
-- `--lyrics`
-- `--bpm`
-- `--project_name`
-- `--beats_per_bar` default `4`
-- `--bars_per_scene` default `2`
-
-### Required Input Folder Layout
-
-`--input_dir` must contain exactly these six files:
+First create an input folder like this:
 
 ```text
 input_scenes/
@@ -187,18 +167,67 @@ Rules:
 
 - filenames must match exactly
 - each clip must be at least as long as the required scene duration
-- the script inspects duration with `ffprobe`
-- the script trims in the FCPXML timeline only; it does not re-encode or pre-trim media files
+- the script trims in the FCPXML timeline, not by re-encoding files
 
-### Output
+Command:
 
-It generates:
+```bash
+python3 orchestrate_splurge_fcpxml.py \
+  --input_dir input_scenes \
+  --lyrics lyrics.txt \
+  --bpm 120 \
+  --beats_per_bar 4 \
+  --bars_per_scene 2 \
+  --project_name fcpx_test
+```
 
-- `prompts.txt`
-- `<project_name>.fcpxml`
-- `scene_01.mp4` through `scene_06.mp4` copied from `--input_dir`
+This creates:
 
-### Example Command
+```text
+fcpx_test/
+├── fcpx_test.fcpxml
+├── prompts.txt
+├── scene_01.mp4
+├── scene_02.mp4
+├── scene_03.mp4
+├── scene_04.mp4
+├── scene_05.mp4
+└── scene_06.mp4
+```
+
+What it does:
+
+- validates all six source clips with `ffprobe`
+- fails if any clip is too short
+- copies the six real clips into the output folder
+- writes an FCPXML timeline with each clip trimmed to the beat-based duration
+- writes scene prompts using the director style brief plus lyric-based vibe changes
+
+## Final Cut Pro Prompt System
+
+[`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py) reads [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md) at runtime.
+
+That file acts as the base creative brief for every generated scene prompt.
+
+The script then adjusts the mood of each scene from the lyric text. Current vibe patterns include:
+
+- high-energy lines like `fire`, `crash`, `run`, `break` shift toward a volatile ignition look
+- uplift lines like `glow`, `light`, `higher`, `rise` shift toward a neon ascent look
+- darker or intimate lines like `night`, `shadow`, `dream`, `hold`, `love` shift toward an after-dark mood
+
+Each FCP scene prompt includes:
+
+- the base style brief
+- lyric-sensitive vibe
+- camera direction
+- lighting direction
+- palette direction
+- texture direction
+- timing constraints tied to BPM and bars
+
+## Example Commands
+
+Inline lyrics with the FCP workflow:
 
 ```bash
 python3 orchestrate_splurge_fcpxml.py \
@@ -215,77 +244,59 @@ We lift higher and higher" \
   --project_name real_fcpx_test
 ```
 
-### Example Output
+Inline lyrics with the Premiere workflow:
 
-```text
-real_fcpx_test/
-├── real_fcpx_test.fcpxml
-├── prompts.txt
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
+```bash
+python3 orchestrate_splurge.py \
+  --lyrics "City lights burn through the haze
+We run until the skyline breaks
+Hands up in the static glow
+No sleep, no brakes, just let it show
+Crash the silence, start the fire
+We lift higher and higher" \
+  --bpm 120 \
+  --beats_per_bar 4 \
+  --bars_per_scene 2 \
+  --project_name demo_premiere
 ```
 
-### Final Cut Pro Behavior
+## What To Expect In The Output
 
-The generated FCPXML:
-
-- creates one asset for each copied scene clip
-- preserves each source clip's full duration in the asset definition
-- places six clips back-to-back on the primary storyline
-- trims each clip instance to the beat-derived scene length
-
-At `120 BPM`, `4/4`, `2 bars per scene`, each imported clip should land at `4s` and the total timeline should be `24s`.
-
-### Failure Cases
-
-The FCPXML script exits early if:
-
-- `--input_dir` is missing
-- any required `scene_0X.mp4` file is missing
-- `ffprobe` is not installed
-- a clip duration cannot be read
-- a clip is shorter than the required scene duration
-
-### Real Test Checklist
-
-For a clean Final Cut Pro test:
-
-1. Put six real clips in `input_scenes/` named `scene_01.mp4` through `scene_06.mp4`.
-2. Make sure each clip is at least as long as the target scene duration.
-3. Run `orchestrate_splurge_fcpxml.py` with `--input_dir input_scenes`.
-4. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
-5. Confirm the clips appear in order from `scene_01` to `scene_06`.
-6. Confirm each cut lands on the expected musical boundary.
-7. Confirm the total timeline length matches `6 * scene_duration`.
-8. Export once to verify Final Cut keeps the cut points unchanged.
-
-## Prompts Output
-
-Both scripts write `prompts.txt` containing:
+`prompts.txt` includes:
 
 - project metadata
-- BPM
-- time signature
-- bars per scene
-- beats per scene
-- scene length
-- frame count per scene
-- lyric chunk for each scene
-- bar window for each scene
-- beat window for each scene
-- one full LTX-style prompt for each scene
+- BPM and timing info
+- lyric chunk per scene
+- bar and beat window per scene
+- source clip info for the FCP workflow
+- one prompt per scene
 
-The FCPXML workflow also records:
+FCP prompts additionally reflect:
 
-- input directory
-- source clip filename for each scene
-- source clip duration for each scene
+- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
+- lyric-based vibe changes
+- camera, lighting, palette, and texture direction
 
-## Validation Commands
+## Import Checklist
+
+### Premiere
+
+1. Run `orchestrate_splurge.py`.
+2. Import `<project_name>/<project_name>.xml` into Premiere.
+3. Confirm six clips appear in order.
+4. Replace placeholder clips later if needed.
+
+### Final Cut Pro
+
+1. Put six real clips in `input_scenes/`.
+2. Run `orchestrate_splurge_fcpxml.py`.
+3. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
+4. Confirm clips appear in order from `scene_01` to `scene_06`.
+5. Confirm cuts land on the expected musical boundary.
+6. Confirm total length matches `6 * scene_duration`.
+7. Export once to verify Final Cut keeps the cut points.
+
+## Validation
 
 Syntax check:
 
@@ -294,35 +305,23 @@ python3 -m py_compile orchestrate_splurge.py
 python3 -m py_compile orchestrate_splurge_fcpxml.py
 ```
 
-Quick Premiere test:
-
-```bash
-python3 orchestrate_splurge.py \
-  --lyrics lyrics.txt \
-  --bpm 120 \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name premiere_test
-```
-
-Quick Final Cut Pro test:
-
-```bash
-python3 orchestrate_splurge_fcpxml.py \
-  --input_dir input_scenes \
-  --lyrics lyrics.txt \
-  --bpm 120 \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name fcpx_test
-```
-
-Inspect generated files:
+Inspect generated folders:
 
 ```bash
 ls -l premiere_test
 ls -l fcpx_test
 ```
+
+## Failure Cases
+
+The FCPXML workflow exits early if:
+
+- `--input_dir` is missing
+- any required `scene_0X.mp4` file is missing
+- `ffprobe` is not installed
+- a clip duration cannot be read
+- a clip is shorter than the required scene duration
+- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md) is missing
 
 ## Current Limitations
 
@@ -332,24 +331,3 @@ ls -l fcpx_test
 - FCPXML workflow currently expects `.mp4` inputs with exact scene filenames
 - no audio analysis is performed beyond BPM math
 - no direct Premiere or Final Cut Pro API integration exists; both workflows are file-based
-
-## Quick Start
-
-If you only want the shortest path for Final Cut Pro:
-
-1. Put six real clips in `input_scenes/` named `scene_01.mp4` through `scene_06.mp4`.
-2. Put lyrics into `lyrics.txt`.
-3. Run:
-
-```bash
-python3 orchestrate_splurge_fcpxml.py \
-  --input_dir input_scenes \
-  --lyrics lyrics.txt \
-  --bpm 120 \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name my_song
-```
-
-4. Import `my_song/my_song.fcpxml` into Final Cut Pro.
-5. Confirm each cut lands on the expected musical boundary.
