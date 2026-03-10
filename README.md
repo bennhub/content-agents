@@ -2,16 +2,16 @@
 
 `Content Agents` turns lyrics and tempo into a six-scene prompt package plus an edit timeline.
 
-This repo now has two separate workflows:
+This repo has two separate workflows:
 
 - [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py): Premiere/XMEML test workflow using one placeholder clip copied six times
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow using six real clips and a style-driven prompt system
+- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow using six real clips plus scene-by-scene JSON visual direction
 
 ## What The Project Produces
 
 Depending on the script you run, the project generates:
 
-- `prompts.txt` with one descriptive prompt per scene
+- `prompts.txt` with one prompt per scene
 - a six-clip edit timeline
 - copied scene media inside the output project folder
 
@@ -28,20 +28,12 @@ Both workflows:
 - split the lyrics into 6 scenes
 - calculate timing from BPM and bars
 
-The Final Cut Pro workflow adds a creative layer:
+The Final Cut Pro workflow adds a scene-style system:
 
-- it loads [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
-- it uses that file as a reusable director brief for every scene prompt
-- it changes the scene vibe based on lyric content
-- it varies camera language, lighting, color, and texture scene by scene
-
-The current style brief is called `High-Motion LTX 2.3` and emphasizes:
-
-- cinematic lighting
-- 4k-grade texture detail
-- tracking shots
-- low-angle framing
-- aggressive motion and editorially useful composition
+- it loads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
+- it pulls `style`, `camera`, `lighting`, and `palette` by scene index
+- it combines those visual settings with the lyric chunk for that scene
+- it falls back to a generic `Cinematic` style if a scene is missing from the JSON
 
 ## Shared Timing Model
 
@@ -92,6 +84,7 @@ Main files:
 
 - [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py)
 - [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py)
+- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
 - [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
 - [`premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/premiere_xml_logic.md)
 
@@ -101,6 +94,7 @@ Current repo layout:
 Content-Agents/
 ├── orchestrate_splurge.py
 ├── orchestrate_splurge_fcpxml.py
+├── director_settings.json
 ├── director_style_v1.md
 ├── placeholder_master.mp4
 ├── premiere_xml_logic.md
@@ -201,29 +195,47 @@ What it does:
 - fails if any clip is too short
 - copies the six real clips into the output folder
 - writes an FCPXML timeline with each clip trimmed to the beat-based duration
-- writes scene prompts using the director style brief plus lyric-based vibe changes
+- writes scene prompts by combining the lyric chunk with the JSON-defined scene style
 
-## Final Cut Pro Prompt System
+## Final Cut Pro Scene Style System
 
-[`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py) reads [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md) at runtime.
+[`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py) reads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) at runtime.
 
-That file acts as the base creative brief for every generated scene prompt.
+That file must contain a JSON array. Each array item corresponds to a scene index:
 
-The script then adjusts the mood of each scene from the lyric text. Current vibe patterns include:
+- array item `0` = scene 1
+- array item `1` = scene 2
+- array item `2` = scene 3
+- array item `3` = scene 4
+- array item `4` = scene 5
+- array item `5` = scene 6
 
-- high-energy lines like `fire`, `crash`, `run`, `break` shift toward a volatile ignition look
-- uplift lines like `glow`, `light`, `higher`, `rise` shift toward a neon ascent look
-- darker or intimate lines like `night`, `shadow`, `dream`, `hold`, `love` shift toward an after-dark mood
+Each scene entry can define:
 
-Each FCP scene prompt includes:
+- `style`
+- `camera`
+- `lighting`
+- `palette`
 
-- the base style brief
-- lyric-sensitive vibe
-- camera direction
-- lighting direction
-- palette direction
-- texture direction
-- timing constraints tied to BPM and bars
+Example structure:
+
+```json
+[
+  {
+    "style": "Volatile Ignition",
+    "camera": "aggressive tracking shot with low-angle pressure and whip-pan resets",
+    "lighting": "hard backlight through haze with flashing practicals and hot edge light",
+    "palette": "molten amber, electric cyan, and bruised shadow"
+  }
+]
+```
+
+If a scene entry is missing, the script uses a generic fallback:
+
+- style: `Cinematic`
+- camera: tracking shot with confident movement and low-angle framing
+- lighting: cinematic lighting with motivated practicals, contrast, and atmospheric haze
+- palette: steel blue, tungsten amber, and controlled shadow
 
 ## Example Commands
 
@@ -273,9 +285,11 @@ We lift higher and higher" \
 
 FCP prompts additionally reflect:
 
-- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
-- lyric-based vibe changes
-- camera, lighting, palette, and texture direction
+- the JSON-defined scene style
+- scene-specific camera direction
+- scene-specific lighting direction
+- scene-specific palette direction
+- lyric content for that scene
 
 ## Import Checklist
 
@@ -289,12 +303,13 @@ FCP prompts additionally reflect:
 ### Final Cut Pro
 
 1. Put six real clips in `input_scenes/`.
-2. Run `orchestrate_splurge_fcpxml.py`.
-3. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
-4. Confirm clips appear in order from `scene_01` to `scene_06`.
-5. Confirm cuts land on the expected musical boundary.
-6. Confirm total length matches `6 * scene_duration`.
-7. Export once to verify Final Cut keeps the cut points.
+2. Update [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) if you want different scene styles.
+3. Run `orchestrate_splurge_fcpxml.py`.
+4. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
+5. Confirm clips appear in order from `scene_01` to `scene_06`.
+6. Confirm cuts land on the expected musical boundary.
+7. Confirm total length matches `6 * scene_duration`.
+8. Export once to verify Final Cut keeps the cut points.
 
 ## Validation
 
@@ -321,7 +336,8 @@ The FCPXML workflow exits early if:
 - `ffprobe` is not installed
 - a clip duration cannot be read
 - a clip is shorter than the required scene duration
-- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md) is missing
+- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is missing
+- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is not a valid JSON array
 
 ## Current Limitations
 
@@ -329,5 +345,6 @@ The FCPXML workflow exits early if:
 - both workflows are fixed to 6 scenes
 - Premiere workflow still uses one placeholder source copied six times
 - FCPXML workflow currently expects `.mp4` inputs with exact scene filenames
+- FCPXML scene style selection is index-based, not semantic
 - no audio analysis is performed beyond BPM math
 - no direct Premiere or Final Cut Pro API integration exists; both workflows are file-based

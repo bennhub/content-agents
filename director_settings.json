@@ -1,0 +1,38 @@
+[
+  {
+    "style": "Volatile Ignition",
+    "camera": "aggressive tracking shot with low-angle pressure and whip-pan resets",
+    "lighting": "hard backlight through haze with flashing practicals and hot edge light",
+    "palette": "molten amber, electric cyan, and bruised shadow"
+  },
+  {
+    "style": "Street Velocity",
+    "camera": "fast lateral tracking with handheld pressure and a sharp push-in",
+    "lighting": "sodium street spill, rolling shadows, and glossy highlight hits",
+    "palette": "crimson, asphalt black, and chrome silver"
+  },
+  {
+    "style": "Neon Ascent",
+    "camera": "floating tracking shot with crane-like lift and wide low-angle reveals",
+    "lighting": "radiant neon spill with volumetric beams and reflective glow",
+    "palette": "electric blue, sodium gold, and magenta haze"
+  },
+  {
+    "style": "After-Dark Tension",
+    "camera": "slow stalking tracking shot with lens-close movement and compressed framing",
+    "lighting": "low-key practical lighting with selective pools of glow in heavy atmosphere",
+    "palette": "midnight blue, deep crimson, and silver highlights"
+  },
+  {
+    "style": "Impact Burst",
+    "camera": "hard-driving tracking move with low-angle hero framing and crash zoom energy",
+    "lighting": "strobing practicals, harsh silhouette edges, and smoke-filled contrast",
+    "palette": "burnt orange, white-hot highlights, and obsidian black"
+  },
+  {
+    "style": "Lift-Off Finale",
+    "camera": "sweeping tracking shot with upward movement and expansive dolly drift",
+    "lighting": "glossy backlight, atmospheric bloom, and polished reflective highlights",
+    "palette": "gold, electric blue, and luminous violet"
+  }
+]

@@ -27,41 +27,12 @@ from orchestrate_splurge import (
 FCPXML_VERSION = "1.5"
 FRAME_DURATION = Fraction(1001, 24000)
 EXPECTED_SCENE_FILES = tuple(f"scene_{index:02d}.mp4" for index in range(1, SCENE_COUNT + 1))
-DIRECTOR_STYLE_PATH = Path(__file__).with_name("director_style_v1.md")
-
-VIBE_PRESETS = (
-    {
-        "label": "volatile ignition",
-        "keywords": ("fire", "burn", "crash", "riot", "run", "brakes", "wild", "break"),
-        "lighting": "hard backlight, flashing practicals, blown highlights, and hot edge light through haze",
-        "camera": "aggressive tracking shot with low-angle pressure, whip-pan resets, and a hard push-in",
-        "palette": "molten amber, electric cyan, and bruised shadow",
-        "texture": "sparks, smoke, lens grime, heat shimmer, and turbulent motion blur",
-    },
-    {
-        "label": "neon ascent",
-        "keywords": ("light", "glow", "sky", "rise", "higher", "shine", "gold", "lift"),
-        "lighting": "radiant neon spill, volumetric beams, and glossy highlights that bloom around the subject",
-        "camera": "floating tracking shot with crane-like lift, lateral drift, and expansive low-angle reveals",
-        "palette": "sodium gold, electric blue, and luminous magenta haze",
-        "texture": "glass reflections, floating particles, wet pavement sheen, and premium 4k surface detail",
-    },
-    {
-        "label": "after-dark seduction",
-        "keywords": ("night", "shadow", "dream", "ghost", "moon", "touch", "kiss", "hold", "love"),
-        "lighting": "low-key practical lighting, moonlit contrast, and selective pools of glow in heavy atmosphere",
-        "camera": "slow stalking tracking shot, intimate low angle, and close lens-proximate movement",
-        "palette": "midnight blue, crimson accents, and silver highlights",
-        "texture": "condensation, soft haze, reflective skin tones, and velvet-black backgrounds with fine grain",
-    },
-)
-
-DEFAULT_VIBE = {
-    "label": "cinematic pressure",
-    "lighting": "sculpted cinematic lighting with deep contrast, motivated practicals, and atmospheric haze",
-    "camera": "driving tracking shot with dolly pressure, lateral drift, and assertive low-angle framing",
+DIRECTOR_SETTINGS_PATH = Path(__file__).with_name("director_settings.json")
+DEFAULT_SCENE_STYLE = {
+    "style": "Cinematic",
+    "camera": "tracking shot with confident movement and low-angle framing",
+    "lighting": "cinematic lighting with motivated practicals, contrast, and atmospheric haze",
     "palette": "steel blue, tungsten amber, and controlled shadow",
-    "texture": "rain mist, floating dust, polished reflections, and sharp 4k material detail",
 }
 
 
@@ -106,34 +77,43 @@ def fcpx_time_from_seconds(seconds: float) -> str:
     return f"{value.numerator}/{value.denominator}s"
 
 
-def load_director_style() -> str:
-    if not DIRECTOR_STYLE_PATH.exists():
-        raise SystemExit(f"Error: missing director style file: {DIRECTOR_STYLE_PATH}")
+def load_director_settings() -> list[dict[str, str]]:
+    if not DIRECTOR_SETTINGS_PATH.exists():
+        raise SystemExit(f"Error: missing director settings file: {DIRECTOR_SETTINGS_PATH}")
 
-    raw_style = DIRECTOR_STYLE_PATH.read_text(encoding="utf-8")
-    cleaned_lines: list[str] = []
-    for line in raw_style.splitlines():
-        stripped = line.strip()
-        if not stripped:
+    try:
+        payload = json.loads(DIRECTOR_SETTINGS_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Error: invalid JSON in {DIRECTOR_SETTINGS_PATH.name}: {exc}") from exc
+
+    if not isinstance(payload, list):
+        raise SystemExit(f"Error: {DIRECTOR_SETTINGS_PATH.name} must contain a JSON array.")
+
+    normalized: list[dict[str, str]] = []
+    for entry in payload:
+        if not isinstance(entry, dict):
+            normalized.append(DEFAULT_SCENE_STYLE.copy())
             continue
-        stripped = re.sub(r"^#{1,6}\s*", "", stripped)
-        stripped = re.sub(r"^-\s*", "", stripped)
-        cleaned_lines.append(stripped)
-    return "; ".join(cleaned_lines)
 
-
-def infer_vibe(scene_text: str) -> dict[str, str]:
-    lowered = scene_text.lower()
-    for preset in VIBE_PRESETS:
-        if any(keyword in lowered for keyword in preset["keywords"]):
-            return {
-                "label": preset["label"],
-                "lighting": preset["lighting"],
-                "camera": preset["camera"],
-                "palette": preset["palette"],
-                "texture": preset["texture"],
+        normalized.append(
+            {
+                "style": str(entry.get("style", DEFAULT_SCENE_STYLE["style"])).strip()
+                or DEFAULT_SCENE_STYLE["style"],
+                "camera": str(entry.get("camera", DEFAULT_SCENE_STYLE["camera"])).strip()
+                or DEFAULT_SCENE_STYLE["camera"],
+                "lighting": str(entry.get("lighting", DEFAULT_SCENE_STYLE["lighting"])).strip()
+                or DEFAULT_SCENE_STYLE["lighting"],
+                "palette": str(entry.get("palette", DEFAULT_SCENE_STYLE["palette"])).strip()
+                or DEFAULT_SCENE_STYLE["palette"],
             }
-    return DEFAULT_VIBE.copy()
+        )
+    return normalized
+
+
+def get_scene_style(scene_number: int, director_settings: list[dict[str, str]]) -> dict[str, str]:
+    if 1 <= scene_number <= len(director_settings):
+        return director_settings[scene_number - 1]
+    return DEFAULT_SCENE_STYLE.copy()
 
 
 def build_fcpx_prompt(
@@ -141,20 +121,18 @@ def build_fcpx_prompt(
     scene_number: int,
     bpm: float,
     timing: TimingSpec,
-    style_brief: str,
+    director_settings: list[dict[str, str]],
 ) -> str:
-    vibe = infer_vibe(scene_text)
+    scene_style = get_scene_style(scene_number, director_settings)
     energy = classify_energy(scene_text)
     sanitized_lyric = re.sub(r"\s+", " ", scene_text).strip()
 
     return (
         f"Scene {scene_number:02d} | LTX 2.3 prompt | "
-        f"Build a {vibe['label']} cinematic music-video shot with {energy}. "
-        f"Follow this director style: {style_brief}. "
-        f"Use {vibe['lighting']}. "
-        f"Camera language: {vibe['camera']}. "
-        f"Color direction: {vibe['palette']}. "
-        f"Texture direction: {vibe['texture']}. "
+        f"Build a {scene_style['style']} cinematic music-video shot with {energy}. "
+        f"Use camera direction: {scene_style['camera']}. "
+        f"Use lighting direction: {scene_style['lighting']}. "
+        f"Use palette direction: {scene_style['palette']}. "
         f"Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. "
         f"Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every {timing.beats_per_scene} beats "
         f"({timing.bars_per_scene} bars in {timing.beats_per_bar}/4) at {bpm:.2f} BPM. "
@@ -299,7 +277,7 @@ def write_outputs(
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = output_dir.resolve()
     project_label = output_dir.name
-    style_brief = load_director_style()
+    director_settings = load_director_settings()
     scene_sources = validate_input_scenes(input_dir.resolve(), timing)
 
     scenes = split_into_scenes(lyrics, SCENE_COUNT)
@@ -320,7 +298,7 @@ def write_outputs(
         f"Frames per scene: {timing.frames_per_scene}",
         f"Input directory: {input_dir.resolve()}",
         f"Timeline type: FCPXML {FCPXML_VERSION}",
-        f"Director style: {DIRECTOR_STYLE_PATH.resolve()}",
+        f"Director settings: {DIRECTOR_SETTINGS_PATH.resolve()}",
         "",
     ]
 
@@ -336,7 +314,7 @@ def write_outputs(
         prompt_lines.append(f"Source duration: {source_duration:.2f}s")
         prompt_lines.append(f"Bar window: {bar_start} -> {bar_end}")
         prompt_lines.append(f"Beat window: {beat_start:.2f} -> {beat_end:.2f}")
-        prompt_lines.append(build_fcpx_prompt(scene_text, index, bpm, timing, style_brief))
+        prompt_lines.append(build_fcpx_prompt(scene_text, index, bpm, timing, director_settings))
         prompt_lines.append("")
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
