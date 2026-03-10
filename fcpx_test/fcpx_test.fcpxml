@@ -1,0 +1,28 @@
+<?xml version="1.0" ?>
+<fcpxml version="1.5">
+  <resources>
+    <format id="r1" name="FFVideoFormat720p2398" frameDuration="1001/24000s" width="1280" height="720" fieldOrder="progressive"/>
+    <asset id="r2" name="scene_01.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_01.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+    <asset id="r3" name="scene_02.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_02.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+    <asset id="r4" name="scene_03.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_03.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+    <asset id="r5" name="scene_04.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_04.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+    <asset id="r6" name="scene_05.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_05.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+    <asset id="r7" name="scene_06.mp4" src="file:///Users/ben/Git%20Projects/Content-Agents/fcpx_test/scene_06.mp4" start="0s" duration="1001/250s" hasVideo="1" hasAudio="1" format="r1" audioSources="1" audioChannels="2" audioRate="48k"/>
+  </resources>
+  <library>
+    <event name="fcpx_test Event">
+      <project name="fcpx_test">
+        <sequence format="r1" duration="3003/125s" tcStart="0s" tcFormat="NDF" audioLayout="stereo" audioRate="48k">
+          <spine>
+            <video ref="r2" name="scene_01.mp4" offset="0s" start="0s" duration="1001/250s"/>
+            <video ref="r3" name="scene_02.mp4" offset="1001/250s" start="0s" duration="1001/250s"/>
+            <video ref="r4" name="scene_03.mp4" offset="1001/125s" start="0s" duration="1001/250s"/>
+            <video ref="r5" name="scene_04.mp4" offset="3003/250s" start="0s" duration="1001/250s"/>
+            <video ref="r6" name="scene_05.mp4" offset="2002/125s" start="0s" duration="1001/250s"/>
+            <video ref="r7" name="scene_06.mp4" offset="1001/50s" start="0s" duration="1001/250s"/>
+          </spine>
+        </sequence>
+      </project>
+    </event>
+  </library>
+</fcpxml>
