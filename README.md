@@ -400,5 +400,5 @@ python3 orchestrate_splurge.py --lyrics "City lights burn through the haze
   Hands up in the static glow
   No sleep, no brakes, just let it show
   Crash the silence, start the fire
-  We lift higher and higher" --bpm 120 --beats_per_bar 4 --bars_per_scene 2 --project_name premiere_test
+  We lift higher and higher" --bpm 120 --beats_per_bar 4 --bars_per_scene 1 --project_name two_second_test
   ```
