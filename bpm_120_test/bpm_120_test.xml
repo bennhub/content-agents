@@ -1,0 +1,168 @@
+<?xml version="1.0" ?>
+<xmeml version="4">
+  <sequence>
+    <name>bpm_120_test_Visual_Splurge</name>
+    <rate>
+      <timebase>24</timebase>
+      <ntsc>TRUE</ntsc>
+    </rate>
+    <duration>576</duration>
+    <media>
+      <video>
+        <format>
+          <samplecharacteristics>
+            <rate>
+              <timebase>24</timebase>
+              <ntsc>TRUE</ntsc>
+            </rate>
+            <width>1280</width>
+            <height>720</height>
+            <anamorphic>FALSE</anamorphic>
+            <pixelaspectratio>square</pixelaspectratio>
+            <fielddominance>none</fielddominance>
+          </samplecharacteristics>
+        </format>
+        <track>
+          <clipitem id="scene_01">
+            <name>scene_01.mp4</name>
+            <file id="file_01">
+              <name>scene_01.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_01.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>0</start>
+            <end>96</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+          <clipitem id="scene_02">
+            <name>scene_02.mp4</name>
+            <file id="file_02">
+              <name>scene_02.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_02.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>96</start>
+            <end>192</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+          <clipitem id="scene_03">
+            <name>scene_03.mp4</name>
+            <file id="file_03">
+              <name>scene_03.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_03.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>192</start>
+            <end>288</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+          <clipitem id="scene_04">
+            <name>scene_04.mp4</name>
+            <file id="file_04">
+              <name>scene_04.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_04.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>288</start>
+            <end>384</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+          <clipitem id="scene_05">
+            <name>scene_05.mp4</name>
+            <file id="file_05">
+              <name>scene_05.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_05.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>384</start>
+            <end>480</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+          <clipitem id="scene_06">
+            <name>scene_06.mp4</name>
+            <file id="file_06">
+              <name>scene_06.mp4</name>
+              <rate>
+                <timebase>24</timebase>
+                <ntsc>TRUE</ntsc>
+              </rate>
+              <pathurl>file://localhost/Users/ben/Git Projects/Content-Agents/bpm_120_test/scene_06.mp4</pathurl>
+              <media>
+                <video>
+                  <samplecharacteristics>
+                    <width>1280</width>
+                    <height>720</height>
+                  </samplecharacteristics>
+                </video>
+              </media>
+            </file>
+            <start>480</start>
+            <end>576</end>
+            <in>0</in>
+            <out>96</out>
+          </clipitem>
+        </track>
+      </video>
+    </media>
+  </sequence>
+</xmeml>
