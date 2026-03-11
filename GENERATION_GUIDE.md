@@ -1,6 +1,6 @@
 # Generation Guide
 
-This guide shows the full step-by-step flow for generating a Final Cut Pro package with prompts, scene styles, copied clips, and an `.fcpxml` timeline.
+This guide shows the full step-by-step flow for generating a Final Cut Pro package with shot cards, Nano Banana prompts, LTX prompts, scene styles, copied clips, and an `.fcpxml` timeline.
 
 ## What You Need
 
@@ -83,11 +83,11 @@ How the app uses this file:
 
 - `BPM:` sets timing
 - `## Lyrics` gets split into 6 scenes
-- `## Creative Notes` influences the auto-generated camera, lighting, and palette choices
+- `## Creative Notes` influences the visual storyline, camera, lighting, and palette choices
 
 ## Step 4: Run The Generator
 
-Run:it
+Run:
 
 ```bash
 python3 orchestrate_splurge_fcpxml.py \
@@ -105,11 +105,13 @@ What happens during this step:
 3. It extracts lyrics
 4. It splits the lyrics into 6 scenes
 5. It examines the lyrics and creative notes
-6. It auto-generates a `director_settings.json` for those 6 scenes
-7. It validates the 6 input clips with `ffprobe`
-8. It copies those clips into the output folder
-9. It generates `prompts.txt`
-10. It generates `my_song.fcpxml`
+6. It builds one six-scene visual storyline
+7. It auto-generates a `director_settings.json` for those 6 scenes
+8. It writes a shot card, Nano Banana prompt, and LTX prompt for each scene
+9. It validates the 6 input clips with `ffprobe`
+10. It copies those clips into the output folder
+11. It generates `prompts.txt`
+12. It generates `my_song.fcpxml`
 
 ## Step 5: Check The Output Folder
 
@@ -131,7 +133,7 @@ my_song/
 What each file is for:
 
 - `my_song.fcpxml`: import this into Final Cut Pro
-- `prompts.txt`: scene prompts for generation or review
+- `prompts.txt`: shot cards plus Nano Banana and LTX prompts for generation or review
 - `director_settings.json`: the auto-generated scene visual direction
 - `scene_01.mp4` to `scene_06.mp4`: copied media used by the timeline
 
@@ -145,7 +147,10 @@ Open:
 Check that:
 
 - the 6 lyric chunks make sense
-- the prompts match the mood of the lyrics
+- the six scenes feel like one connected visual story
+- the shot cards are easy to understand at a glance
+- the Nano Banana prompts feel visually specific
+- the LTX prompts feel focused on motion rather than restating the whole image prompt
 - the generated camera, lighting, and palette feel right
 
 If you want a different look:
@@ -232,9 +237,9 @@ If any of these files are missing:
 
 the script will stop.
 
-### Clips Too Short
+### Clips Shorter Than The Target Length
 
-If a clip is shorter than the required scene length, the script will stop before it generates a broken timeline.
+If a clip is shorter than the target scene length, the script uses the actual clip length in the timeline instead of stretching or looping it.
 
 ## Quick Version
 

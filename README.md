@@ -14,12 +14,12 @@ The Final Cut Pro path is now linked together:
 1. Input: put lyrics and BPM into [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md)
 2. Create: run `orchestrate_splurge_fcpxml.py`
 3. Output:
-   - scene prompts in `prompts.txt`
+   - shot cards plus Nano Banana and LTX prompts in `prompts.txt`
    - auto-generated `director_settings.json`
    - copied scene clips
    - Final Cut Pro timeline in `.fcpxml`
 
-The script examines the lyric chunks, builds six scenes, auto-generates visual direction for each scene, and writes everything into the output project folder.
+The script examines the lyric chunks, builds one six-scene visual storyline, auto-generates scene visual direction, and writes everything into the output project folder.
 
 ## Project Files
 
@@ -184,7 +184,7 @@ What this mode does:
 - auto-generates `director_settings.json` from the lyric content
 - validates all six source clips with `ffprobe`
 - copies the clips into the output folder
-- writes the scene prompts and `.fcpxml` timeline
+- writes shot cards, Nano Banana prompts, LTX prompts, and the `.fcpxml` timeline
 
 ### Final Cut Pro Workflow: Manual JSON Mode
 
@@ -249,11 +249,14 @@ If a scene entry is missing, the script falls back to a generic `Cinematic` styl
 `prompts.txt` includes:
 
 - project metadata
+- story blueprint metadata
 - BPM and timing info
 - lyric chunk per scene
 - bar and beat window per scene
 - source clip info
-- one prompt per scene
+- one shot card per scene
+- one Nano Banana prompt per scene
+- one LTX motion prompt per scene
 
 In brief-driven mode, the output folder also contains:
 
@@ -261,12 +264,14 @@ In brief-driven mode, the output folder also contains:
 
 The FCP prompts combine:
 
-- the lyric chunk
-- energy inferred from the lyric text
+- one continuous visual storyline
+- a recurring protagonist and world
+- lyric-guided scene action
 - scene camera direction
 - scene lighting direction
 - scene palette direction
-- timing constraints tied to BPM and bars
+- image-model-friendly prompt wording instead of production-note-heavy text
+- a separate motion-focused LTX prompt for animating the generated image
 
 ## Import Checklist
 
@@ -316,13 +321,12 @@ The FCPXML workflow exits early if:
 - any required `scene_0X.mp4` file is missing
 - `ffprobe` is not installed
 - a clip duration cannot be read
-- a clip is shorter than the required scene duration
 - manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is missing
 - manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is not a valid JSON array
 
 ## Current Limitations
 
-- prompt generation is heuristic, not model-driven
+- visual story generation is heuristic, not model-driven
 - both workflows are fixed to 6 scenes
 - Premiere workflow still uses one placeholder source copied six times
 - FCPXML workflow currently expects `.mp4` inputs with exact scene filenames

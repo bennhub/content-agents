@@ -51,10 +51,22 @@ class EditTimingSpec(NamedTuple):
     uses_double_time: bool
 
 
+class StoryBlueprint(NamedTuple):
+    protagonist: str
+    setting: str
+    wardrobe: str
+    atmosphere: str
+    visual_arc: tuple[str, ...]
+
+
 def append_clause(base: str, clause: str) -> str:
     if clause in base:
         return base
     return f"{base}, {clause}"
+
+
+def clean_text(value: str) -> str:
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def parse_args() -> argparse.Namespace:
@@ -254,6 +266,182 @@ def apply_creative_notes(scene_style: dict[str, str], creative_notes: str) -> di
     return style
 
 
+def infer_story_blueprint(lyrics: str, creative_notes: str) -> StoryBlueprint:
+    combined = f"{lyrics}\n{creative_notes}".lower()
+
+    if any(word in combined for word in ("apartment", "bedroom", "hallway", "window", "room")):
+        setting = "a sleek high-rise apartment at night with long hallways, a bedroom, and a wide city window"
+    elif any(word in combined for word in ("car", "street", "city")):
+        setting = "a moody night cityscape with a luxury car, wet streets, and isolated interior spaces"
+    else:
+        setting = "a stylish night interior with polished shadows, soft practical lights, and city glow outside"
+
+    if any(word in combined for word in ("jewelry", "fabric", "premium", "expensive", "luxury", "polished")):
+        wardrobe = "tailored dark street-luxury wardrobe, layered jewelry, clean textures, understated expensive details"
+    else:
+        wardrobe = "clean dark wardrobe with subtle jewelry and refined streetwear textures"
+
+    atmosphere_parts = []
+    if any(word in combined for word in ("haze", "smoke", "fog", "atmosphere")):
+        atmosphere_parts.append("soft haze hanging in the room")
+    if any(word in combined for word in ("wet", "rain", "reflection", "reflections", "glass")):
+        atmosphere_parts.append("glass reflections and wet reflective highlights")
+    if any(word in combined for word in ("lamp", "practical", "neon", "glow")):
+        atmosphere_parts.append("warm practical lamps and subtle neon spill")
+    if any(word in combined for word in ("night", "late-night", "nocturnal")):
+        atmosphere_parts.append("late-night stillness")
+    atmosphere = ", ".join(atmosphere_parts) or "quiet late-night air and polished shadow"
+
+    protagonist = "the same R&B / hip-hop artist in every scene, calm, reflective, and finally able to breathe"
+    visual_arc = (
+        "boxed-in pressure",
+        "private unraveling",
+        "recognizing the weight",
+        "making peace with the ending",
+        "feeling the room open up",
+        "stepping into relief",
+    )
+    return StoryBlueprint(
+        protagonist=protagonist,
+        setting=setting,
+        wardrobe=wardrobe,
+        atmosphere=atmosphere,
+        visual_arc=visual_arc,
+    )
+
+
+def infer_subject_action(scene_text: str, scene_number: int) -> str:
+    lowered = scene_text.lower()
+    if any(word in lowered for word in ("autopilot", "numb", "swallowed", "peace")):
+        return "sitting on the edge of the bed, staring into space with tension locked in his shoulders"
+    if any(word in lowered for word in ("match your mood", "flaw", "normal", "calm")):
+        return "walking slowly down a narrow hallway, brushing a hand along the wall as if carrying old pressure"
+    if any(word in lowered for word in ("room got bigger", "lighter", "miss who i was")):
+        return "standing in front of a mirror, catching his own reflection as relief starts to replace doubt"
+    if any(word in lowered for word in ("exhaled", "moving too fast", "mean different")):
+        return "leaning by the open window, looking over the city as he finally exhales and lets the moment settle"
+    if any(word in lowered for word in ("nights", "spirals", "holding my breath")):
+        return "crossing the room alone at night, calm now, with the space around him finally feeling open"
+    if any(word in lowered for word in ("space feels like", "took it sooner")):
+        return "stepping toward the doorway or window light, choosing peace with quiet certainty"
+    if scene_number == 1:
+        return "sitting alone in a dim room before speaking the truth to himself"
+    if scene_number == 6:
+        return "walking toward open space with a lighter expression"
+    return "moving through the room in a quiet reflective moment"
+
+
+def infer_scene_anchor(scene_text: str, scene_number: int, blueprint: StoryBlueprint) -> str:
+    lowered = scene_text.lower()
+    if any(word in lowered for word in ("mirror", "reflection", "who i was")):
+        return "a fogged mirror catching both his face and the city lights behind him"
+    if any(word in lowered for word in ("room got bigger", "lighter", "space")):
+        return "an empty section of the apartment suddenly feeling larger around him"
+    if any(word in lowered for word in ("night", "spirals", "sleep")):
+        return "the dark bedroom and the soft lamp glow that no longer feels threatening"
+    if any(word in lowered for word in ("exhaled", "window", "bigger")):
+        return "the open window and the skyline breathing back at him"
+    if scene_number in (2, 5):
+        return "the apartment hallway stretching behind him in clean perspective"
+    return "the apartment room, city glow, and quiet late-night air"
+
+
+def build_shot_card(
+    scene_text: str,
+    scene_number: int,
+    blueprint: StoryBlueprint,
+    scene_style: dict[str, str],
+) -> str:
+    action = infer_subject_action(scene_text, scene_number)
+    anchor = infer_scene_anchor(scene_text, scene_number, blueprint)
+    arc_label = blueprint.visual_arc[min(scene_number - 1, len(blueprint.visual_arc) - 1)]
+    return (
+        f"{arc_label.title()}: {action}, using {anchor}, shaped by {scene_style['style'].lower()} mood."
+    )
+
+
+def build_nano_banana_prompt(
+    scene_text: str,
+    scene_number: int,
+    blueprint: StoryBlueprint,
+    scene_style: dict[str, str],
+    timeline_duration: float,
+) -> str:
+    action = infer_subject_action(scene_text, scene_number)
+    anchor = infer_scene_anchor(scene_text, scene_number, blueprint)
+    lyric_focus = clean_text(scene_text)
+    return (
+        f"A single strong frame from a {timeline_duration:.2f}-second R&B / hip-hop music video scene. "
+        f"{blueprint.protagonist}, inside {blueprint.setting}, {action}. "
+        f"The image centers on {anchor}. "
+        f"Wardrobe: {blueprint.wardrobe}. "
+        f"Atmosphere: {blueprint.atmosphere}. "
+        f"Lighting: {scene_style['lighting']}. "
+        f"Color palette: {scene_style['palette']}. "
+        f"Camera angle: {scene_style['camera']}. "
+        f"Emotion: {blueprint.visual_arc[min(scene_number - 1, len(blueprint.visual_arc) - 1)]}, intimate, mature, nocturnal, emotionally relieved. "
+        f"Make it feel visually specific, cinematic, believable, and easy for an image model to interpret. "
+        f"No text, no subtitles, no logos, no crowd, no club scene. "
+        f'Lyric inspiration: "{lyric_focus}".'
+    )
+
+
+def infer_motion_phrase(scene_text: str, scene_number: int) -> str:
+    lowered = scene_text.lower()
+    if any(word in lowered for word in ("autopilot", "numb", "swallowed", "peace")):
+        return "the artist breathes slowly, lowers his gaze, and subtly shifts forward as if carrying invisible weight"
+    if any(word in lowered for word in ("match your mood", "flaw", "normal", "calm")):
+        return "he moves down the hallway with a slow measured walk, fingers grazing the wall, shoulders gradually releasing tension"
+    if any(word in lowered for word in ("room got bigger", "lighter", "miss who i was")):
+        return "he studies his reflection, lifts his chin slightly, and lets the expression soften as recognition lands"
+    if any(word in lowered for word in ("night", "spirals", "holding my breath")):
+        return "he crosses the room with unhurried confidence, then settles into stillness as the air around him feels lighter"
+    if any(word in lowered for word in ("exhaled", "mean different", "moving too fast")):
+        return "he leans into the open window light and exhales, letting the body loosen as the city glow flickers behind him"
+    if any(word in lowered for word in ("space feels like", "took it sooner")):
+        return "he steps toward the open space, pauses, and lets the final moment land with quiet certainty"
+    if scene_number == 1:
+        return "he holds still, breathes, and subtly tightens then releases his shoulders"
+    if scene_number == 6:
+        return "he steps forward with calm, deliberate movement and a lighter expression"
+    return "the artist makes a subtle grounded movement that reveals emotional release"
+
+
+def infer_environment_motion(scene_text: str, blueprint: StoryBlueprint) -> str:
+    atmosphere = blueprint.atmosphere.lower()
+    motions = []
+    if "haze" in atmosphere:
+        motions.append("soft haze drifting through the light")
+    if "reflection" in atmosphere:
+        motions.append("reflections shimmering across glass and polished surfaces")
+    if "lamp" in atmosphere or "neon" in atmosphere:
+        motions.append("practical lights glowing steadily with subtle flicker")
+    if not motions:
+        motions.append("gentle ambient movement in the room")
+    return ", ".join(motions)
+
+
+def build_ltx_motion_prompt(
+    scene_text: str,
+    scene_number: int,
+    blueprint: StoryBlueprint,
+    scene_style: dict[str, str],
+    timeline_duration: float,
+) -> str:
+    motion_phrase = infer_motion_phrase(scene_text, scene_number)
+    environment_motion = infer_environment_motion(scene_text, blueprint)
+    return (
+        f"{timeline_duration:.2f}-second cinematic music video shot. "
+        f"Start from the generated image and animate it naturally. "
+        f"Camera motion: {scene_style['camera']}. "
+        f"Subject motion: {motion_phrase}. "
+        f"Environment motion: {environment_motion}. "
+        f"Keep the mood intimate, smooth, nocturnal, and emotionally relieved. "
+        f"Use realistic body motion, subtle breathing, natural fabric and jewelry movement, consistent face and hands. "
+        f"No warping, no flicker, no morphing, no extra limbs, no face drift, no text, no subtitles."
+    )
+
+
 def auto_style_for_scene(scene_text: str, scene_number: int, creative_notes: str) -> dict[str, str]:
     energy = classify_energy(scene_text)
     lowered = scene_text.lower()
@@ -319,33 +507,6 @@ def write_director_settings(output_dir: Path, director_settings: list[dict[str, 
     output_path = output_dir / "director_settings.json"
     output_path.write_text(json.dumps(director_settings, indent=2) + "\n", encoding="utf-8")
     return output_path
-
-
-def build_fcpx_prompt(
-    scene_text: str,
-    scene_number: int,
-    bpm: float,
-    timing: EditTimingSpec,
-    director_settings: list[dict[str, str]],
-    timeline_duration: float,
-) -> str:
-    scene_style = get_scene_style(scene_number, director_settings)
-    energy = classify_energy(scene_text)
-    sanitized_lyric = re.sub(r"\s+", " ", scene_text).strip()
-
-    return (
-        f"Scene {scene_number:02d} | LTX 2.3 prompt | "
-        f"Build a {scene_style['style']} cinematic music-video shot with {energy}. "
-        f"Use camera direction: {scene_style['camera']}. "
-        f"Use lighting direction: {scene_style['lighting']}. "
-        f"Use palette direction: {scene_style['palette']}. "
-        f"Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. "
-        f"Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every {timing.beats_per_scene} beats "
-        f"({timing.bars_per_scene:.2f} bars in {timing.beats_per_bar}/4) at edit BPM {timing.effective_bpm:.2f} "
-        f"from song BPM {bpm:.2f}. "
-        f"Design it as one continuous {timeline_duration:.2f}-second shot with no subtitles, no logos, and no watermarks. "
-        f'Lyric focus: "{sanitized_lyric}".'
-    )
 
 
 def get_media_duration_seconds(path: Path) -> float:
@@ -492,6 +653,7 @@ def write_outputs(
     output_dir = output_dir.resolve()
     project_label = output_dir.name
     scenes = split_into_scenes(lyrics, SCENE_COUNT)
+    blueprint = infer_story_blueprint(lyrics, creative_notes)
     if brief_file:
         director_settings = build_auto_director_settings(scenes, creative_notes)
         director_settings_path = write_director_settings(output_dir, director_settings)
@@ -524,6 +686,11 @@ def write_outputs(
         f"Timeline type: FCPXML {FCPXML_VERSION}",
         f"Director settings: {director_settings_path}",
         f"Brief file: {brief_file or 'manual CLI inputs'}",
+        f"Story protagonist: {blueprint.protagonist}",
+        f"Story setting: {blueprint.setting}",
+        f"Story wardrobe: {blueprint.wardrobe}",
+        f"Story atmosphere: {blueprint.atmosphere}",
+        f"Visual arc: {' | '.join(blueprint.visual_arc)}",
         "",
     ]
 
@@ -534,23 +701,33 @@ def write_outputs(
         bar_end = index * timing.bars_per_scene
         source_duration = scene_sources[index - 1][1]
         timeline_duration = timeline_durations[index - 1]
+        scene_style = get_scene_style(index, director_settings)
+        shot_card = build_shot_card(scene_text, index, blueprint, scene_style)
+        nano_prompt = build_nano_banana_prompt(
+            scene_text,
+            index,
+            blueprint,
+            scene_style,
+            timeline_duration,
+        )
+        ltx_prompt = build_ltx_motion_prompt(
+            scene_text,
+            index,
+            blueprint,
+            scene_style,
+            timeline_duration,
+        )
         prompt_lines.append(f"[Scene {index:02d}]")
         prompt_lines.append(f"Lyric chunk: {scene_text}")
         prompt_lines.append(f"Source clip: {scene_sources[index - 1][0].name}")
         prompt_lines.append(f"Source duration: {source_duration:.2f}s")
         prompt_lines.append(f"Timeline duration used: {timeline_duration:.2f}s")
+        prompt_lines.append(f"Visual style: {scene_style['style']}")
         prompt_lines.append(f"Bar window: {bar_start:.2f} -> {bar_end:.2f}")
         prompt_lines.append(f"Beat window: {beat_start:.2f} -> {beat_end:.2f}")
-        prompt_lines.append(
-            build_fcpx_prompt(
-                scene_text,
-                index,
-                bpm,
-                timing,
-                director_settings,
-                timeline_duration,
-            )
-        )
+        prompt_lines.append(f"Shot card: {shot_card}")
+        prompt_lines.append(f"Nano Banana prompt: {nano_prompt}")
+        prompt_lines.append(f"LTX prompt: {ltx_prompt}")
         prompt_lines.append("")
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
