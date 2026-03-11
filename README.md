@@ -48,6 +48,23 @@ python3 --version
 ffprobe -version
 ```
 
+## Why Six Scenes
+
+This repo is currently optimized around 6 input clips because the primary target is short-form content:
+
+- short ads
+- short music video posts
+- other social-first vertical or promo edits
+
+The working assumption is:
+
+- each scene lands at roughly 5 seconds
+- 6 scenes gives you a package around 30 seconds total
+
+That makes the workflow fast to generate, easy to review, and practical for short-form testing.
+
+This is a starting constraint, not a permanent one. The current system is intentionally scoped to a simple six-scene structure first so the prompt generation, timing logic, and edit export flow stay reliable while the project expands into more workflows later.
+
 ## How To Run
 
 Run commands from the repo root.

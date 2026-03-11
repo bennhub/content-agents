@@ -12,6 +12,23 @@ Use these folders consistently:
 - input_scenes: the six source clips for FCP generation
 - output: generated project folders
 
+## Why The Workflow Uses Six Scenes
+
+The current generator is scoped to 6 scenes on purpose.
+
+The main use case right now is short-form content:
+
+- short ads
+- short music video posts
+- promo-style social clips
+
+The intended rhythm is:
+
+- each scene is roughly 5 seconds
+- 6 scenes produces a package around 30 seconds total
+
+That keeps the workflow practical for fast content generation and testing. The six-scene setup is the current baseline, not the final limit. The project can expand to longer formats later once the workflow types and prompt systems are stable.
+
 ## Shared Setup
 
 1. Open the repo:
