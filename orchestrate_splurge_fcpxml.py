@@ -30,6 +30,7 @@ EXPECTED_SCENE_FILES = tuple(f"scene_{index:02d}.mp4" for index in range(1, SCEN
 DIRECTOR_SETTINGS_PATH = Path(__file__).with_name("director_settings.json")
 SLOW_BPM_THRESHOLD = 100.0
 TARGET_MAX_SCENE_SECONDS = 5.0
+FRAME_SECONDS = float(FRAME_DURATION)
 DEFAULT_SCENE_STYLE = {
     "style": "Cinematic",
     "camera": "tracking shot with confident movement and low-angle framing",
@@ -139,6 +140,14 @@ def fcpx_time_from_seconds(seconds: float) -> str:
     if value.denominator == 1:
         return f"{value.numerator}s"
     return f"{value.numerator}/{value.denominator}s"
+
+
+def frames_from_seconds_floor(seconds: float) -> int:
+    return max(1, math.floor(seconds / FRAME_SECONDS + 1e-9))
+
+
+def seconds_from_frames(frames: int) -> float:
+    return float(FRAME_DURATION * frames)
 
 
 def extract_markdown_section(text: str, heading: str) -> str:
@@ -558,11 +567,14 @@ def validate_input_scenes(input_dir: Path, timing: EditTimingSpec) -> list[tuple
     return scene_sources
 
 
-def build_timeline_durations(
+def build_timeline_frame_counts(
     scene_sources: list[tuple[Path, float]],
     timing: EditTimingSpec,
-) -> list[float]:
-    return [min(source_duration, timing.seconds_per_scene) for _path, source_duration in scene_sources]
+) -> list[int]:
+    return [
+        min(frames_from_seconds_floor(source_duration), timing.frames_per_scene)
+        for _path, source_duration in scene_sources
+    ]
 
 
 def build_fcpxml(
@@ -570,7 +582,7 @@ def build_fcpxml(
     output_dir: Path,
     timing: EditTimingSpec,
     scene_sources: list[tuple[Path, float]],
-    timeline_durations: list[float],
+    timeline_frame_counts: list[int],
 ) -> str:
     fcpxml = Element("fcpxml", version=FCPXML_VERSION)
     resources = SubElement(fcpxml, "resources")
@@ -607,12 +619,12 @@ def build_fcpxml(
     library = SubElement(fcpxml, "library")
     event = SubElement(library, "event", name=f"{project_label} Event")
     project = SubElement(event, "project", name=project_label)
-    total_timeline_seconds = sum(timeline_durations)
+    total_timeline_frames = sum(timeline_frame_counts)
     sequence = SubElement(
         project,
         "sequence",
         format="r1",
-        duration=fcpx_time_from_seconds(total_timeline_seconds),
+        duration=fcpx_time_from_frames(total_timeline_frames),
         tcStart="0s",
         tcFormat="NDF",
         audioLayout="stereo",
@@ -620,10 +632,10 @@ def build_fcpxml(
     )
     spine = SubElement(sequence, "spine")
 
-    offset_seconds = 0.0
-    for index, (_scene_source, timeline_duration) in enumerate(zip(scene_sources, timeline_durations), start=1):
+    offset_frames = 0
+    for index, (_scene_source, timeline_frames) in enumerate(zip(scene_sources, timeline_frame_counts), start=1):
         clip_id = f"scene_{index:02d}"
-        offset = fcpx_time_from_seconds(offset_seconds)
+        offset = fcpx_time_from_frames(offset_frames)
         SubElement(
             spine,
             "video",
@@ -631,9 +643,9 @@ def build_fcpxml(
             name=f"{clip_id}.mp4",
             offset=offset,
             start="0s",
-            duration=fcpx_time_from_seconds(timeline_duration),
+            duration=fcpx_time_from_frames(timeline_frames),
         )
-        offset_seconds += timeline_duration
+        offset_frames += timeline_frames
 
     pretty = minidom.parseString(tostring(fcpxml, encoding="utf-8")).toprettyxml(indent="  ")
     return "\n".join(line for line in pretty.splitlines() if line.strip())
@@ -662,7 +674,8 @@ def write_outputs(
         director_settings_path = DIRECTOR_SETTINGS_PATH.resolve()
 
     scene_sources = validate_input_scenes(input_dir.resolve(), timing)
-    timeline_durations = build_timeline_durations(scene_sources, timing)
+    timeline_frame_counts = build_timeline_frame_counts(scene_sources, timing)
+    timeline_durations = [seconds_from_frames(frame_count) for frame_count in timeline_frame_counts]
     prompts_path = output_dir / "prompts.txt"
     fcpxml_path = output_dir / f"{project_label}.fcpxml"
 
@@ -732,7 +745,7 @@ def write_outputs(
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
     fcpxml_path.write_text(
-        build_fcpxml(project_label, output_dir, timing, scene_sources, timeline_durations),
+        build_fcpxml(project_label, output_dir, timing, scene_sources, timeline_frame_counts),
         encoding="utf-8",
     )
     return prompts_path, fcpxml_path
