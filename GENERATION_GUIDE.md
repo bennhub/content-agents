@@ -1,16 +1,25 @@
 # Generation Guide
 
-This guide shows the full step-by-step flow for generating a Final Cut Pro package with shot cards, Nano Banana prompts, LTX prompts, scene styles, copied clips, and an `.fcpxml` timeline.
+This guide explains how to generate Final Cut Pro packages for both supported workflows:
 
-## What You Need
+- `music_video`
+- `advertisement`
 
-Before you start, make sure you have:
+Each workflow creates:
 
-- Python 3 installed
-- `ffprobe` installed
+- `prompts.txt`
+- `director_settings.json`
+- copied scene clips
+- an `.fcpxml` timeline for Final Cut Pro
+
+## Before You Start
+
+Make sure you have:
+
+- Python 3
+- `ffprobe`
 - 6 source video clips
-- your lyrics
-- the repo open in the terminal
+- this repo open in Terminal
 
 Check your tools:
 
@@ -19,17 +28,15 @@ python3 --version
 ffprobe -version
 ```
 
-## Step 1: Open The Repo
-
-In Terminal:
+Open the repo:
 
 ```bash
 cd "/Users/ben/Git Projects/Content-Agents"
 ```
 
-## Step 2: Prepare Your Input Clips
+## Shared Clip Setup
 
-Create a folder called `input_scenes` in the repo root and put your 6 clips inside it using these exact names:
+Both workflows expect 6 input clips in a folder like this:
 
 ```text
 input_scenes/
@@ -41,23 +48,27 @@ input_scenes/
 └── scene_06.mp4
 ```
 
-Important:
+Rules:
 
 - the names must match exactly
-- each clip must be long enough for the scene timing you want
-- at `120 BPM`, `4/4`, `2 bars per scene`, each clip must be at least `4.0s`
+- the clips are copied into the generated output folder
+- if a clip is shorter than the target scene length, the script uses the real clip length in the timeline instead of stretching or looping it
 
-## Step 3: Fill Out The Project Brief
+## Music Video Workflow
 
-Open [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md).
+Use this when you want lyric-driven scenes for Nano Banana, LTX, and Final Cut Pro.
 
-Edit:
+### Step 1: Fill Out The Music Brief
+
+Open [music_vid_input.md](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md).
+
+It should contain:
 
 - `BPM:`
-- the `## Lyrics` section
-- the `## Creative Notes` section
+- `## Lyrics`
+- `## Creative Notes`
 
-Example:
+Example structure:
 
 ```md
 # Project Input
@@ -66,56 +77,34 @@ BPM: 120
 
 ## Lyrics
 
-City lights burn through the haze
-We run until the skyline breaks
-Hands up in the static glow
-No sleep, no brakes, just let it show
-Crash the silence, start the fire
-We lift higher and higher
+Your lyrics here...
 
 ## Creative Notes
 
-Keep it premium, high-motion, and cinematic.
-Lean into wet reflections, haze, and strong practical lighting.
+Moody late-night R&B video, polished lighting, soft haze, reflective surfaces.
 ```
 
-How the app uses this file:
+What the script uses:
 
-- `BPM:` sets timing
-- `## Lyrics` gets split into 6 scenes
-- `## Creative Notes` influences the visual storyline, camera, lighting, and palette choices
+- `BPM` for timing
+- `Lyrics` for the six scene chunks
+- `Creative Notes` for the visual storyline, look, and scene direction
 
-## Step 4: Run The Generator
-
-Run:
+### Step 2: Run The Music Video Generator
 
 ```bash
 python3 orchestrate_splurge_fcpxml.py \
-  --brief_file project_input.md \
+  --workflow_type music_video \
+  --brief_file music_vid_input.md \
   --input_dir input_scenes \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
   --project_name my_song
 ```
 
-What happens during this step:
+### Step 3: Review The Output
 
-1. The app reads `project_input.md`
-2. It extracts BPM
-3. It extracts lyrics
-4. It splits the lyrics into 6 scenes
-5. It examines the lyrics and creative notes
-6. It builds one six-scene visual storyline
-7. It auto-generates a `director_settings.json` for those 6 scenes
-8. It writes a shot card, Nano Banana prompt, and LTX prompt for each scene
-9. It validates the 6 input clips with `ffprobe`
-10. It copies those clips into the output folder
-11. It generates `prompts.txt`
-12. It generates `my_song.fcpxml`
-
-## Step 5: Check The Output Folder
-
-After the script finishes, you should get:
+This creates:
 
 ```text
 my_song/
@@ -130,15 +119,6 @@ my_song/
 └── scene_06.mp4
 ```
 
-What each file is for:
-
-- `my_song.fcpxml`: import this into Final Cut Pro
-- `prompts.txt`: shot cards plus Nano Banana and LTX prompts for generation or review
-- `director_settings.json`: the auto-generated scene visual direction
-- `scene_01.mp4` to `scene_06.mp4`: copied media used by the timeline
-
-## Step 6: Review The Generated Scene Direction
-
 Open:
 
 - `my_song/prompts.txt`
@@ -146,48 +126,30 @@ Open:
 
 Check that:
 
-- the 6 lyric chunks make sense
-- the six scenes feel like one connected visual story
-- the shot cards are easy to understand at a glance
-- the Nano Banana prompts feel visually specific
-- the LTX prompts feel focused on motion rather than restating the whole image prompt
-- the generated camera, lighting, and palette feel right
+- the six scenes feel like one connected story
+- the `Shot card` is clear
+- the `Nano Banana prompt` is visually specific
+- the `LTX prompt` is motion-focused
 
-If you want a different look:
+### Step 4: Import Into Final Cut Pro
 
-1. change `## Creative Notes` in `project_input.md`
-2. run the generator again
+Import:
 
-## Step 7: Import Into Final Cut Pro
+- `my_song/my_song.fcpxml`
 
-In Final Cut Pro:
+Then check:
 
-1. Import `my_song/my_song.fcpxml`
-2. Check that the 6 clips appear in order
-3. Check that cuts land on the expected timing
-4. Check total sequence length
+- clips are in order
+- scene timing feels right
+- sequence length looks correct
 
-At `120 BPM`, `4/4`, `2 bars per scene`:
+### Music Video Manual Mode
 
-- each clip should land at `4s`
-- total timeline length should be `24s`
-
-## Step 8: Export A Test
-
-Export once from Final Cut Pro and confirm:
-
-- the clips stay in order
-- the cut points remain correct
-- Final Cut does not shift or rewrite the timing in a bad way
-
-## If You Want Manual Control Instead
-
-If you do not want automatic scene style generation, you can run the app in manual mode using the root-level [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json).
-
-Command:
+If you do not want brief-driven auto scene direction, you can run music-video mode manually with lyrics, BPM, and the repo-level [director_settings.json](/Users/ben/Git%20Projects/Content-Agents/director_settings.json):
 
 ```bash
 python3 orchestrate_splurge_fcpxml.py \
+  --workflow_type music_video \
   --lyrics lyrics.txt \
   --bpm 120 \
   --input_dir input_scenes \
@@ -196,37 +158,132 @@ python3 orchestrate_splurge_fcpxml.py \
   --project_name my_song
 ```
 
-In that mode:
+## Advertisement Workflow
 
-- lyrics come from `--lyrics`
-- BPM comes from `--bpm`
-- scene styles come from the repo-level `director_settings.json`
+Use this when you want six ad scenes built around a product brief instead of lyrics.
+
+### Supported Ad Styles
+
+Advertisement mode supports:
+
+- `brand_spot`
+- `lifestyle`
+- `ugc`
+
+### Step 1: Fill Out The Ad Brief
+
+Open [ad_project_input.md](/Users/ben/Git%20Projects/Content-Agents/ad_project_input.md).
+
+It should contain:
+
+- `## Product Name`
+- `## Audience`
+- `## Core Problem`
+- `## Value Proposition`
+- `## Offer Or CTA`
+- `## Creative Notes`
+- optional `## Visual References`
+
+What the script uses:
+
+- `Product Name` as the brand/product focus
+- `Audience` to shape the ad scenes
+- `Core Problem` to create the pain point and hook
+- `Value Proposition` to create reveal/demo/benefit scenes
+- `Offer Or CTA` for the close
+- `Creative Notes` to shape tone and styling
+- `Visual References` to support the look
+
+### Step 2: Choose The Ad Style
+
+Pick one:
+
+- `brand_spot` for polished product commercials
+- `lifestyle` for aspirational real-life usage
+- `ugc` for creator-style or social-native ads
+
+### Step 3: Run The Advertisement Generator
+
+Brand spot example:
+
+```bash
+python3 orchestrate_splurge_fcpxml.py \
+  --workflow_type advertisement \
+  --ad_style brand_spot \
+  --brief_file ad_project_input.md \
+  --input_dir input_scenes \
+  --project_name my_ad
+```
+
+Lifestyle example:
+
+```bash
+python3 orchestrate_splurge_fcpxml.py \
+  --workflow_type advertisement \
+  --ad_style lifestyle \
+  --brief_file ad_project_input.md \
+  --input_dir input_scenes \
+  --project_name my_ad
+```
+
+UGC example:
+
+```bash
+python3 orchestrate_splurge_fcpxml.py \
+  --workflow_type advertisement \
+  --ad_style ugc \
+  --brief_file ad_project_input.md \
+  --input_dir input_scenes \
+  --project_name my_ad
+```
+
+### Step 4: Review The Ad Output
+
+This creates:
+
+```text
+my_ad/
+├── my_ad.fcpxml
+├── prompts.txt
+├── director_settings.json
+├── scene_01.mp4
+├── scene_02.mp4
+├── scene_03.mp4
+├── scene_04.mp4
+├── scene_05.mp4
+└── scene_06.mp4
+```
+
+Open:
+
+- `my_ad/prompts.txt`
+- `my_ad/director_settings.json`
+
+Check that:
+
+- the six scenes follow a clear ad progression
+- the ad style is correct for `brand_spot`, `lifestyle`, or `ugc`
+- the `Shot card` clearly describes the sales purpose of the scene
+- the `Nano Banana prompt` is visually readable
+- the `LTX prompt` is usable for motion
+
+### Step 5: Import Into Final Cut Pro
+
+Import:
+
+- `my_ad/my_ad.fcpxml`
+
+Then check:
+
+- the clips are in order
+- each scene lands at the expected length
+- the ad arc feels correct from hook to CTA
 
 ## Common Problems
 
-### Missing BPM
-
-If `project_input.md` does not contain a line like:
-
-```md
-BPM: 120
-```
-
-the script will stop.
-
-### Missing Lyrics Section
-
-If `project_input.md` does not contain:
-
-```md
-## Lyrics
-```
-
-the script will stop.
-
 ### Missing Scene Clips
 
-If any of these files are missing:
+If any of these files are missing, the script stops:
 
 - `scene_01.mp4`
 - `scene_02.mp4`
@@ -235,18 +292,49 @@ If any of these files are missing:
 - `scene_05.mp4`
 - `scene_06.mp4`
 
-the script will stop.
+### Music Video: Missing BPM
 
-### Clips Shorter Than The Target Length
+If [music_vid_input.md](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md) does not contain a line like:
 
-If a clip is shorter than the target scene length, the script uses the actual clip length in the timeline instead of stretching or looping it.
+```md
+BPM: 120
+```
+
+music-video mode stops.
+
+### Music Video: Missing Lyrics Section
+
+If [music_vid_input.md](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md) does not contain:
+
+```md
+## Lyrics
+```
+
+music-video mode stops.
+
+### Advertisement: Missing Product Sections
+
+If [ad_project_input.md](/Users/ben/Git%20Projects/Content-Agents/ad_project_input.md) is missing any required ad section, advertisement mode stops.
+
+### Advertisement: Missing Ad Style
+
+If you run `--workflow_type advertisement` without `--ad_style`, the script stops.
 
 ## Quick Version
 
-If you just want the shortest possible checklist:
+### Quick Music Video
 
 1. Put 6 clips in `input_scenes/`
-2. Fill out `project_input.md`
-3. Run the generator command
+2. Fill out `music_vid_input.md`
+3. Run the `music_video` command
 4. Open the output folder
 5. Import the `.fcpxml` into Final Cut Pro
+
+### Quick Advertisement
+
+1. Put 6 clips in `input_scenes/`
+2. Fill out `ad_project_input.md`
+3. Choose `brand_spot`, `lifestyle`, or `ugc`
+4. Run the `advertisement` command
+5. Open the output folder
+6. Import the `.fcpxml` into Final Cut Pro
