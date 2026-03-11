@@ -2,6 +2,26 @@
 
 `Content Agents` generates prompt packages plus edit timelines for multiple content workflows.
 
+## How The Project Works
+
+This project is not just “a script that does everything by itself.”
+
+The actual operating model is:
+
+- a coding agent such as Codex or Claude Code works through the CLI
+- the agent reads the project brief and repo structure
+- the Python scripts execute the workflow logic
+- the scripts generate prompts, scene direction, and edit timeline files
+- those outputs are then used in tools like Nano Banana, LTX, Premiere, or Final Cut Pro
+
+So the real engine is:
+
+- AI coding agent
+- CLI workflow
+- Python generation scripts
+
+The scripts are the execution layer. The higher-level workflow reasoning, brief handling, repo updates, and process orchestration come from the agent operating in the terminal.
+
 Current workflows:
 
 - [`orchestrate_premxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_premxml.py): Premiere/XMEML placeholder test workflow

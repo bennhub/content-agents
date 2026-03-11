@@ -2,6 +2,24 @@
 
 This guide explains the current repo flow after the reorganization.
 
+## What Drives The Workflow
+
+The workflow is designed to be operated by a coding agent in the CLI, such as Codex or Claude Code.
+
+That matters because the scripts are only one part of the system:
+
+- the agent reads the brief and repo state
+- the Python scripts run the generation logic
+- the outputs are then used in Nano Banana, LTX, Premiere, or Final Cut Pro
+
+So the project engine is:
+
+- AI coding agent
+- CLI workflow
+- Python scripts
+
+The scripts do not replace the overall orchestration layer by themselves.
+
 ## Repo Layout
 
 Use these folders consistently:
