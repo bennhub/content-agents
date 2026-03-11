@@ -1,0 +1,69 @@
+Project: my_song
+Song BPM: 83.00
+Edit BPM: 166.00
+Double-time timing: yes
+Time signature: 4/4
+Bars per scene: 3.25
+Beats per scene: 13
+Target scene length: 4.70s
+Target max scene length: 5.00s
+Frames per scene: 113
+Actual timeline length: 28.19s
+Input directory: /Users/ben/Git Projects/Content-Agents/input_scenes
+Timeline type: FCPXML 1.5
+Director settings: /Users/ben/Git Projects/Content-Agents/my_song/director_settings.json
+Brief file: project_input.md
+
+[Scene 01]
+Lyric chunk: Verse 1 Yeah I was moving on autopilot, calling it love Every day felt loud, but I kept it numb Had a lot to say, I just swallowed it up Didn’t know peace was a thing I was giving up
+Source clip: scene_01.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 1.00 -> 3.25
+Beat window: 0.00 -> 13.00
+Scene 01 | LTX 2.3 prompt | Build a Premium Velvet Intensity cinematic music-video shot with intimate, romantic intensity. Use camera direction: gliding tracking shot with intimate low angles and tight emotional framing, kinetic editorial motion and hard rhythmic movement. Use lighting direction: soft practical bloom, glossy skin highlights, and controlled shadow falloff, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: rose red, warm gold, and midnight plum, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "Verse 1 Yeah I was moving on autopilot, calling it love Every day felt loud, but I kept it numb Had a lot to say, I just swallowed it up Didn’t know peace was a thing I was giving up".
+
+[Scene 02]
+Lyric chunk: I bent my schedule just to match your mood Every win felt small, every flaw felt huge Told myself “that’s normal,” yeah, maybe it is But I ain’t felt this calm in a minute Chorus (Hook) Funny how the room got bigger
+Source clip: scene_02.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 4.25 -> 6.50
+Beat window: 13.00 -> 26.00
+Scene 02 | LTX 2.3 prompt | Build a Premium Rain Cinema cinematic music-video shot with cinematic, pulse-driven urgency. Use camera direction: driving tracking shot with dolly pressure and street-level low-angle movement, kinetic editorial motion and hard rhythmic movement. Use lighting direction: wet practical reflections, backlit rain streaks, and atmospheric contrast, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: steel blue, sodium amber, and gunmetal black, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "I bent my schedule just to match your mood Every win felt small, every flaw felt huge Told myself “that’s normal,” yeah, maybe it is But I ain’t felt this calm in a minute Chorus (Hook) Funny how the room got bigger".
+
+[Scene 03]
+Lyric chunk: When you left, I got lighter I ain’t miss you, I miss who I was Before I started walking on quiet Now the nights don’t hit different I sleep fine, no spirals Guess I was holding my breath that whole time
+Source clip: scene_03.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 7.50 -> 9.75
+Beat window: 26.00 -> 39.00
+Scene 03 | LTX 2.3 prompt | Build a Premium Night Pulse cinematic music-video shot with moody, nocturnal drift. Use camera direction: slow stalking tracking shot with lens-close movement and compressed framing, kinetic editorial motion and hard rhythmic movement. Use lighting direction: low-key practical lighting with selective pools of glow in heavy atmosphere, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: midnight blue, deep crimson, and silver highlights, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "When you left, I got lighter I ain’t miss you, I miss who I was Before I started walking on quiet Now the nights don’t hit different I sleep fine, no spirals Guess I was holding my breath that whole time".
+
+[Scene 04]
+Lyric chunk: Didn’t know till I exhaled Bridge No villain here, no broken glass Just two people moving too fast I meant every word I said back then I just mean different ones now
+Source clip: scene_04.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 10.75 -> 13.00
+Beat window: 39.00 -> 52.00
+Scene 04 | LTX 2.3 prompt | Build a Premium Rain Cinema cinematic music-video shot with cinematic, pulse-driven urgency. Use camera direction: driving tracking shot with dolly pressure and street-level low-angle movement, kinetic editorial motion and hard rhythmic movement. Use lighting direction: wet practical reflections, backlit rain streaks, and atmospheric contrast, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: steel blue, sodium amber, and gunmetal black, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "Didn’t know till I exhaled Bridge No villain here, no broken glass Just two people moving too fast I meant every word I said back then I just mean different ones now".
+
+[Scene 05]
+Lyric chunk: Chorus (Hook) Funny how the room got bigger When you left, I got lighter I ain’t miss you, I miss who I was Before I started walking on quiet Now the nights don’t hit different
+Source clip: scene_05.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 14.00 -> 16.25
+Beat window: 52.00 -> 65.00
+Scene 05 | LTX 2.3 prompt | Build a Premium Night Pulse cinematic music-video shot with moody, nocturnal drift. Use camera direction: slow stalking tracking shot with lens-close movement and compressed framing, kinetic editorial motion and hard rhythmic movement. Use lighting direction: low-key practical lighting with selective pools of glow in heavy atmosphere, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: midnight blue, deep crimson, and silver highlights, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "Chorus (Hook) Funny how the room got bigger When you left, I got lighter I ain’t miss you, I miss who I was Before I started walking on quiet Now the nights don’t hit different".
+
+[Scene 06]
+Lyric chunk: I sleep fine, no spirals Guess I was holding my breath that whole time Didn’t know till I exhaled Outro (Short Verse) If this is what space feels like I should’ve took it sooner
+Source clip: scene_06.mp4
+Source duration: 5.02s
+Timeline duration used: 4.70s
+Bar window: 17.25 -> 19.50
+Beat window: 65.00 -> 78.00
+Scene 06 | LTX 2.3 prompt | Build a Premium Velvet Intensity cinematic music-video shot with intimate, romantic intensity. Use camera direction: gliding tracking shot with intimate low angles and tight emotional framing, kinetic editorial motion and hard rhythmic movement. Use lighting direction: soft practical bloom, glossy skin highlights, and controlled shadow falloff, wet reflective highlights and backlit surface sheen, heavy atmospheric haze with volumetric depth, motivated practicals and visible glow sources, deep shadow falloff and noir contrast. Use palette direction: rose red, warm gold, and midnight plum, mirror-like chrome reflections, polished premium finish, warm amber highlights, cool cyan accents. Keep the frame premium, tactile, high-motion, and editorially useful, with performers and props reacting to the lyric. Maintain 720p framing, 23.976 fps playback feel, and hard rhythmic transitions every 13 beats (3.25 bars in 4/4) at edit BPM 166.00 from song BPM 83.00. Design it as one continuous 4.70-second shot with no subtitles, no logos, and no watermarks. Lyric focus: "I sleep fine, no spirals Guess I was holding my breath that whole time Didn’t know till I exhaled Outro (Short Verse) If this is what space feels like I should’ve took it sooner".

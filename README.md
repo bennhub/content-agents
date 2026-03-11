@@ -2,38 +2,69 @@
 
 `Content Agents` turns lyrics and tempo into a six-scene prompt package plus an edit timeline.
 
-This repo has two separate workflows:
+This repo has two workflows:
 
 - [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py): Premiere/XMEML test workflow using one placeholder clip copied six times
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow using six real clips plus scene-by-scene JSON visual direction
+- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow with an end-to-end input → create → output path
 
-## What The Project Produces
+## End-To-End FCP Workflow
 
-Depending on the script you run, the project generates:
+The Final Cut Pro path is now linked together:
 
-- `prompts.txt` with one prompt per scene
-- a six-clip edit timeline
-- copied scene media inside the output project folder
+1. Input: put lyrics and BPM into [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md)
+2. Create: run `orchestrate_splurge_fcpxml.py`
+3. Output:
+   - scene prompts in `prompts.txt`
+   - auto-generated `director_settings.json`
+   - copied scene clips
+   - Final Cut Pro timeline in `.fcpxml`
 
-Timeline formats:
+The script examines the lyric chunks, builds six scenes, auto-generates visual direction for each scene, and writes everything into the output project folder.
 
-- Premiere workflow: `.xml`
-- Final Cut Pro workflow: `.fcpxml`
+## Project Files
 
-## How Prompt Generation Works
+Main files:
 
-Both workflows:
+- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py)
+- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py)
+- [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md)
+- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
+- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
+- [`premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/premiere_xml_logic.md)
 
-- read lyrics from inline text or a text file
-- split the lyrics into 6 scenes
-- calculate timing from BPM and bars
+Current repo layout:
 
-The Final Cut Pro workflow adds a scene-style system:
+```text
+Content-Agents/
+├── orchestrate_splurge.py
+├── orchestrate_splurge_fcpxml.py
+├── project_input.md
+├── director_settings.json
+├── director_style_v1.md
+├── placeholder_master.mp4
+├── premiere_xml_logic.md
+└── README.md
+```
 
-- it loads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
-- it pulls `style`, `camera`, `lighting`, and `palette` by scene index
-- it combines those visual settings with the lyric chunk for that scene
-- it falls back to a generic `Cinematic` style if a scene is missing from the JSON
+## Requirements
+
+You need:
+
+- Python 3
+- `ffprobe` for the FCPXML workflow
+
+Check them with:
+
+```bash
+python3 --version
+ffprobe -version
+```
+
+No external Python packages are required.
+
+Premiere test workflow only:
+
+- [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) must exist in the repo root
 
 ## Shared Timing Model
 
@@ -58,58 +89,13 @@ Example at `120 BPM`, `4/4`, `2 bars per scene`:
 - each scene clip lands at `4.0s`
 - total timeline length is `24.0s`
 
-## Requirements
-
-You need:
-
-- Python 3
-- `ffprobe` for the FCPXML workflow
-
-Check them with:
-
-```bash
-python3 --version
-ffprobe -version
-```
-
-No external Python packages are required.
-
-Premiere test workflow only:
-
-- [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) must exist in the repo root
-
-## Project Files
-
-Main files:
-
-- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py)
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py)
-- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
-- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
-- [`premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/premiere_xml_logic.md)
-
-Current repo layout:
-
-```text
-Content-Agents/
-├── orchestrate_splurge.py
-├── orchestrate_splurge_fcpxml.py
-├── director_settings.json
-├── director_style_v1.md
-├── placeholder_master.mp4
-├── premiere_xml_logic.md
-└── README.md
-```
-
 ## How To Run
 
 Run commands from the repo root.
 
-### 1. Premiere Test Workflow
+### Premiere Test Workflow
 
 Use this when you want a quick timing/import test in Premiere with placeholder media.
-
-Command:
 
 ```bash
 python3 orchestrate_splurge.py \
@@ -135,17 +121,25 @@ premiere_test/
 └── template_reference.txt
 ```
 
-What it does:
+### Final Cut Pro Workflow: Recommended Brief-Driven Mode
 
-- copies `placeholder_master.mp4` to all six scene files
-- writes a Premiere-importable XMEML timeline
-- writes six prompts based on the lyrics
+1. Edit [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md):
 
-### 2. Final Cut Pro Real Workflow
+```md
+# Project Input
 
-Use this when you want a real six-clip import test in Final Cut Pro.
+BPM: 120
 
-First create an input folder like this:
+## Lyrics
+
+Your lyrics here...
+
+## Creative Notes
+
+Optional notes here...
+```
+
+2. Put six clips in an input folder:
 
 ```text
 input_scenes/
@@ -157,19 +151,12 @@ input_scenes/
 └── scene_06.mp4
 ```
 
-Rules:
-
-- filenames must match exactly
-- each clip must be at least as long as the required scene duration
-- the script trims in the FCPXML timeline, not by re-encoding files
-
-Command:
+3. Run:
 
 ```bash
 python3 orchestrate_splurge_fcpxml.py \
+  --brief_file project_input.md \
   --input_dir input_scenes \
-  --lyrics lyrics.txt \
-  --bpm 120 \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
   --project_name fcpx_test
@@ -181,6 +168,7 @@ This creates:
 fcpx_test/
 ├── fcpx_test.fcpxml
 ├── prompts.txt
+├── director_settings.json
 ├── scene_01.mp4
 ├── scene_02.mp4
 ├── scene_03.mp4
@@ -189,26 +177,63 @@ fcpx_test/
 └── scene_06.mp4
 ```
 
-What it does:
+What this mode does:
 
+- reads BPM and lyrics from `project_input.md`
+- splits the lyrics into 6 scenes
+- auto-generates `director_settings.json` from the lyric content
 - validates all six source clips with `ffprobe`
-- fails if any clip is too short
-- copies the six real clips into the output folder
-- writes an FCPXML timeline with each clip trimmed to the beat-based duration
-- writes scene prompts by combining the lyric chunk with the JSON-defined scene style
+- copies the clips into the output folder
+- writes the scene prompts and `.fcpxml` timeline
 
-## Final Cut Pro Scene Style System
+### Final Cut Pro Workflow: Manual JSON Mode
 
-[`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py) reads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) at runtime.
+If you want to hand-author the scene direction instead of auto-generating it, keep using the root-level [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json).
 
-That file must contain a JSON array. Each array item corresponds to a scene index:
+```bash
+python3 orchestrate_splurge_fcpxml.py \
+  --lyrics lyrics.txt \
+  --bpm 120 \
+  --input_dir input_scenes \
+  --beats_per_bar 4 \
+  --bars_per_scene 2 \
+  --project_name fcpx_test
+```
 
-- array item `0` = scene 1
-- array item `1` = scene 2
-- array item `2` = scene 3
-- array item `3` = scene 4
-- array item `4` = scene 5
-- array item `5` = scene 6
+In this mode the script:
+
+- reads lyrics from `--lyrics`
+- reads BPM from `--bpm`
+- reads scene styles from the repo-level `director_settings.json`
+
+## Final Cut Pro Prompt And Scene Style System
+
+The FCP script supports two style sources:
+
+1. Auto-generated mode via `--brief_file`
+2. Manual JSON mode via repo-level `director_settings.json`
+
+In auto-generated mode:
+
+- the script reads BPM and lyrics from the markdown brief
+- it splits the lyrics into scenes
+- it examines each lyric chunk
+- it creates a matching `style`, `camera`, `lighting`, and `palette`
+- it writes those settings to `<project_name>/director_settings.json`
+
+In manual mode:
+
+- the script reads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) from the repo root
+- each array item maps to a scene index
+
+JSON scene mapping:
+
+- item `0` = scene 1
+- item `1` = scene 2
+- item `2` = scene 3
+- item `3` = scene 4
+- item `4` = scene 5
+- item `5` = scene 6
 
 Each scene entry can define:
 
@@ -217,60 +242,7 @@ Each scene entry can define:
 - `lighting`
 - `palette`
 
-Example structure:
-
-```json
-[
-  {
-    "style": "Volatile Ignition",
-    "camera": "aggressive tracking shot with low-angle pressure and whip-pan resets",
-    "lighting": "hard backlight through haze with flashing practicals and hot edge light",
-    "palette": "molten amber, electric cyan, and bruised shadow"
-  }
-]
-```
-
-If a scene entry is missing, the script uses a generic fallback:
-
-- style: `Cinematic`
-- camera: tracking shot with confident movement and low-angle framing
-- lighting: cinematic lighting with motivated practicals, contrast, and atmospheric haze
-- palette: steel blue, tungsten amber, and controlled shadow
-
-## Example Commands
-
-Inline lyrics with the FCP workflow:
-
-```bash
-python3 orchestrate_splurge_fcpxml.py \
-  --input_dir input_scenes \
-  --lyrics "City lights burn through the haze
-We run until the skyline breaks
-Hands up in the static glow
-No sleep, no brakes, just let it show
-Crash the silence, start the fire
-We lift higher and higher" \
-  --bpm 120 \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name real_fcpx_test
-```
-
-Inline lyrics with the Premiere workflow:
-
-```bash
-python3 orchestrate_splurge.py \
-  --lyrics "City lights burn through the haze
-We run until the skyline breaks
-Hands up in the static glow
-No sleep, no brakes, just let it show
-Crash the silence, start the fire
-We lift higher and higher" \
-  --bpm 120 \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name demo_premiere
-```
+If a scene entry is missing, the script falls back to a generic `Cinematic` style.
 
 ## What To Expect In The Output
 
@@ -280,16 +252,21 @@ We lift higher and higher" \
 - BPM and timing info
 - lyric chunk per scene
 - bar and beat window per scene
-- source clip info for the FCP workflow
+- source clip info
 - one prompt per scene
 
-FCP prompts additionally reflect:
+In brief-driven mode, the output folder also contains:
 
-- the JSON-defined scene style
-- scene-specific camera direction
-- scene-specific lighting direction
-- scene-specific palette direction
-- lyric content for that scene
+- auto-generated `director_settings.json`
+
+The FCP prompts combine:
+
+- the lyric chunk
+- energy inferred from the lyric text
+- scene camera direction
+- scene lighting direction
+- scene palette direction
+- timing constraints tied to BPM and bars
 
 ## Import Checklist
 
@@ -303,7 +280,7 @@ FCP prompts additionally reflect:
 ### Final Cut Pro
 
 1. Put six real clips in `input_scenes/`.
-2. Update [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) if you want different scene styles.
+2. Fill out [`project_input.md`](/Users/ben/Git%20Projects/Content-Agents/project_input.md) or update [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json).
 3. Run `orchestrate_splurge_fcpxml.py`.
 4. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
 5. Confirm clips appear in order from `scene_01` to `scene_06`.
@@ -332,12 +309,16 @@ ls -l fcpx_test
 The FCPXML workflow exits early if:
 
 - `--input_dir` is missing
+- neither `--brief_file` nor `--lyrics` is provided
+- no BPM is available from `--bpm` or the markdown brief
+- the brief file is missing a `BPM:` line
+- the brief file is missing a `## Lyrics` section
 - any required `scene_0X.mp4` file is missing
 - `ffprobe` is not installed
 - a clip duration cannot be read
 - a clip is shorter than the required scene duration
-- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is missing
-- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is not a valid JSON array
+- manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is missing
+- manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is not a valid JSON array
 
 ## Current Limitations
 
@@ -345,6 +326,6 @@ The FCPXML workflow exits early if:
 - both workflows are fixed to 6 scenes
 - Premiere workflow still uses one placeholder source copied six times
 - FCPXML workflow currently expects `.mp4` inputs with exact scene filenames
-- FCPXML scene style selection is index-based, not semantic
+- FCP scene style generation is heuristic
 - no audio analysis is performed beyond BPM math
 - no direct Premiere or Final Cut Pro API integration exists; both workflows are file-based
