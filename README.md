@@ -1,58 +1,45 @@
 # Content Agents
 
-`Content Agents` turns lyrics and tempo into a six-scene prompt package plus an edit timeline.
+`Content Agents` generates prompt packages plus edit timelines for multiple content workflows.
 
-This repo has two workflows:
+Current workflows:
 
-- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py): Premiere/XMEML test workflow using one placeholder clip copied six times
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py): Final Cut Pro workflow with multiple creative modes, currently `music_video` and `advertisement`
+- [`orchestrate_premxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_premxml.py): Premiere/XMEML placeholder test workflow
+- [`orchestrate_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_fcpxml.py): Final Cut Pro workflow for `music_video` and `advertisement`
 
-## End-To-End FCP Workflow
-
-The Final Cut Pro path is now linked together:
-
-1. Input: use a workflow-specific brief such as [`music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md) for music videos or [`ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/ad_project_input.md) for advertisements
-2. Create: run `orchestrate_splurge_fcpxml.py`
-3. Output:
-   - shot cards plus Nano Banana and LTX prompts in `prompts.txt`
-   - auto-generated `director_settings.json`
-   - copied scene clips
-   - Final Cut Pro timeline in `.fcpxml`
-
-The script examines the lyric chunks, builds one six-scene visual storyline, auto-generates scene visual direction, and writes everything into the output project folder.
-
-## Project Files
-
-Main files:
-
-- [`orchestrate_splurge.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge.py)
-- [`orchestrate_splurge_fcpxml.py`](/Users/ben/Git%20Projects/Content-Agents/orchestrate_splurge_fcpxml.py)
-- [`music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md)
-- [`ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/ad_project_input.md)
-- [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json)
-- [`director_style_v1.md`](/Users/ben/Git%20Projects/Content-Agents/director_style_v1.md)
-- [`premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/premiere_xml_logic.md)
-
-Current repo layout:
+## Repo Structure
 
 ```text
 Content-Agents/
-├── orchestrate_splurge.py
-├── orchestrate_splurge_fcpxml.py
-├── music_vid_input.md
-├── director_settings.json
-├── director_style_v1.md
-├── placeholder_master.mp4
-├── premiere_xml_logic.md
-└── README.md
+├── orchestrate_premxml.py
+├── orchestrate_fcpxml.py
+├── briefs/
+│   ├── music_vid_input.md
+│   └── ad_project_input.md
+├── config/
+│   └── director_settings.json
+├── docs/
+│   ├── BACKLOG.md
+│   ├── GENERATION_GUIDE.md
+│   └── premiere_xml_logic.md
+├── input_scenes/
+└── output/
 ```
+
+Use:
+
+- [`briefs/music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/music_vid_input.md) for music video briefs
+- [`briefs/ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/ad_project_input.md) for advertisement briefs
+- [`config/director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/config/director_settings.json) for manual music-video scene styling
+- [`docs/GENERATION_GUIDE.md`](/Users/ben/Git%20Projects/Content-Agents/docs/GENERATION_GUIDE.md) for step-by-step usage
+- [`docs/BACKLOG.md`](/Users/ben/Git%20Projects/Content-Agents/docs/BACKLOG.md) for planned next workflows
 
 ## Requirements
 
 You need:
 
 - Python 3
-- `ffprobe` for the FCPXML workflow
+- `ffprobe` for the FCP workflow
 
 Check them with:
 
@@ -61,315 +48,101 @@ python3 --version
 ffprobe -version
 ```
 
-No external Python packages are required.
-
-Premiere test workflow only:
-
-- [`placeholder_master.mp4`](/Users/ben/Git%20Projects/Content-Agents/placeholder_master.mp4) must exist in the repo root
-
-## Shared Timing Model
-
-Both scripts use the same timing math:
-
-- seconds per beat = `60 / BPM`
-- beats per scene = `beats_per_bar * bars_per_scene`
-- seconds per scene = `beats_per_scene * (60 / BPM)`
-- frames per scene = `seconds_per_scene * 23.976`
-
-Defaults:
-
-- `beats_per_bar = 4`
-- `bars_per_scene = 2`
-- `scene_count = 6`
-
-Example at `120 BPM`, `4/4`, `2 bars per scene`:
-
-- 1 beat = `0.5s`
-- 1 bar = `2.0s`
-- 2 bars = `4.0s`
-- each scene clip lands at `4.0s`
-- total timeline length is `24.0s`
-
 ## How To Run
 
 Run commands from the repo root.
 
 ### Premiere Test Workflow
 
-Use this when you want a quick timing/import test in Premiere with placeholder media.
-
 ```bash
-python3 orchestrate_splurge.py \
+python3 orchestrate_premxml.py \
   --lyrics lyrics.txt \
   --bpm 120 \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
-  --project_name premiere_test
+  --project_name output/premiere_test
 ```
 
-This creates:
+This writes a Premiere test package to `output/premiere_test/`.
 
-```text
-premiere_test/
-├── premiere_test.xml
-├── prompts.txt
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-├── scene_06.mp4
-└── template_reference.txt
-```
+### Final Cut Pro: Music Video
 
-### Final Cut Pro Workflow: Music Video Mode
-
-1. Edit [`music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md):
-
-```md
-# Project Input
-
-BPM: 120
-
-## Lyrics
-
-Your lyrics here...
-
-## Creative Notes
-
-Optional notes here...
-```
-
-2. Put six clips in an input folder:
-
-```text
-input_scenes/
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
-```
-
+1. Fill out [`briefs/music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/music_vid_input.md).
+2. Put six clips in `input_scenes/` named `scene_01.mp4` through `scene_06.mp4`.
 3. Run:
 
 ```bash
-python3 orchestrate_splurge_fcpxml.py \
+python3 orchestrate_fcpxml.py \
   --workflow_type music_video \
-  --brief_file music_vid_input.md \
+  --brief_file briefs/music_vid_input.md \
   --input_dir input_scenes \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
-  --project_name fcpx_test
+  --project_name output/my_song
 ```
 
-This creates:
+This writes:
 
-```text
-fcpx_test/
-├── fcpx_test.fcpxml
-├── prompts.txt
-├── director_settings.json
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
-```
+- `output/my_song/my_song.fcpxml`
+- `output/my_song/prompts.txt`
+- `output/my_song/director_settings.json`
+- copied scene clips
 
-What this mode does:
+### Final Cut Pro: Advertisement
 
-- reads BPM and lyrics from `music_vid_input.md`
-- splits the lyrics into 6 scenes
-- auto-generates `director_settings.json` from the lyric content
-- validates all six source clips with `ffprobe`
-- copies the clips into the output folder
-- writes shot cards, Nano Banana prompts, LTX prompts, and the `.fcpxml` timeline
-
-### Final Cut Pro Workflow: Advertisement Mode
-
-Use [`ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/ad_project_input.md) and choose an ad subtype with `--ad_style`.
+1. Fill out [`briefs/ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/ad_project_input.md).
+2. Put six clips in `input_scenes/`.
+3. Run one of these:
 
 ```bash
-python3 orchestrate_splurge_fcpxml.py \
+python3 orchestrate_fcpxml.py \
   --workflow_type advertisement \
   --ad_style brand_spot \
-  --brief_file ad_project_input.md \
+  --brief_file briefs/ad_project_input.md \
   --input_dir input_scenes \
-  --project_name ad_test
+  --project_name output/my_ad
 ```
 
-Supported ad subtypes:
+Supported ad styles:
 
 - `brand_spot`
 - `lifestyle`
 - `ugc`
 
-What advertisement mode does:
+### Final Cut Pro: Manual Music Video JSON Mode
 
-- reads a product brief instead of lyrics/BPM
-- builds six ad scenes around product, audience, problem, value proposition, and CTA
-- generates workflow-aware `director_settings.json`
-- writes shot cards, Nano Banana prompts, LTX prompts, and the `.fcpxml` timeline
-
-### Final Cut Pro Workflow: Manual JSON Music Video Mode
-
-If you want to hand-author the scene direction instead of auto-generating it, keep using the root-level [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json).
+If you want to hand-author scene style, edit [`config/director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/config/director_settings.json) and run:
 
 ```bash
-python3 orchestrate_splurge_fcpxml.py \
+python3 orchestrate_fcpxml.py \
   --workflow_type music_video \
   --lyrics lyrics.txt \
   --bpm 120 \
   --input_dir input_scenes \
   --beats_per_bar 4 \
   --bars_per_scene 2 \
-  --project_name fcpx_test
+  --project_name output/my_song
 ```
 
-In this mode the script:
+## Outputs
 
-- reads lyrics from `--lyrics`
-- reads BPM from `--bpm`
-- reads scene styles from the repo-level `director_settings.json`
+The FCP workflow writes:
 
-## Final Cut Pro Prompt And Scene Style System
+- `prompts.txt`
+- `director_settings.json`
+- copied scene clips
+- one `.fcpxml` timeline
 
-The FCP script supports multiple creative workflows:
+Music video prompts include:
 
-1. `music_video`
-2. `advertisement`
+- `Shot card`
+- `Nano Banana prompt`
+- `LTX prompt`
 
-Music video mode supports:
+Advertisement prompts include the same structure, but the scene logic is based on product brief sections instead of lyrics.
 
-- the script reads BPM and lyrics from the markdown brief
-- it splits the lyrics into scenes
-- it examines each lyric chunk
-- it creates a matching `style`, `camera`, `lighting`, and `palette`
-- it writes those settings to `<project_name>/director_settings.json`
+## Notes
 
-Advertisement mode supports:
-
-- a product brief file
-- `brand_spot`, `lifestyle`, and `ugc` ad styles
-- six scene plans built around hook, problem, reveal/demo, benefit/proof, and CTA
-
-Manual JSON mode still exists for music videos:
-
-- the script reads [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) from the repo root
-- each array item maps to a scene index
-
-JSON scene mapping:
-
-- item `0` = scene 1
-- item `1` = scene 2
-- item `2` = scene 3
-- item `3` = scene 4
-- item `4` = scene 5
-- item `5` = scene 6
-
-Each scene entry can define:
-
-- `style`
-- `camera`
-- `lighting`
-- `palette`
-
-If a scene entry is missing, the script falls back to a generic `Cinematic` style.
-
-## What To Expect In The Output
-
-`prompts.txt` includes:
-
-- project metadata
-- workflow metadata
-- story blueprint metadata
-- BPM and timing info
-- lyric chunk per scene
-- bar and beat window per scene
-- source clip info
-- one shot card per scene
-- one Nano Banana prompt per scene
-- one LTX motion prompt per scene
-
-In brief-driven mode, the output folder also contains:
-
-- auto-generated `director_settings.json`
-
-The FCP prompts combine:
-
-- one continuous visual storyline
-- a recurring protagonist and world
-- lyric-guided scene action
-- scene camera direction
-- scene lighting direction
-- scene palette direction
-- image-model-friendly prompt wording instead of production-note-heavy text
-- a separate motion-focused LTX prompt for animating the generated image
-
-## Import Checklist
-
-### Premiere
-
-1. Run `orchestrate_splurge.py`.
-2. Import `<project_name>/<project_name>.xml` into Premiere.
-3. Confirm six clips appear in order.
-4. Replace placeholder clips later if needed.
-
-### Final Cut Pro
-
-1. Put six real clips in `input_scenes/`.
-2. Fill out [`music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/music_vid_input.md) or update [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json).
-3. Run `orchestrate_splurge_fcpxml.py`.
-4. Import `<project_name>/<project_name>.fcpxml` into Final Cut Pro.
-5. Confirm clips appear in order from `scene_01` to `scene_06`.
-6. Confirm cuts land on the expected musical boundary.
-7. Confirm total length matches `6 * scene_duration`.
-8. Export once to verify Final Cut keeps the cut points.
-
-## Validation
-
-Syntax check:
-
-```bash
-python3 -m py_compile orchestrate_splurge.py
-python3 -m py_compile orchestrate_splurge_fcpxml.py
-```
-
-Inspect generated folders:
-
-```bash
-ls -l premiere_test
-ls -l fcpx_test
-```
-
-## Failure Cases
-
-The FCPXML workflow exits early if:
-
-- `--input_dir` is missing
-- neither `--brief_file` nor `--lyrics` is provided
-- no BPM is available from `--bpm` or the markdown brief
-- the brief file is missing a `BPM:` line
-- the brief file is missing a `## Lyrics` section
-- advertisement mode is used without `--ad_style`
-- advertisement mode is used without `--brief_file`
-- advertisement brief mode is missing a required product section
-- any required `scene_0X.mp4` file is missing
-- `ffprobe` is not installed
-- a clip duration cannot be read
-- manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is missing
-- manual mode is used and [`director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/director_settings.json) is not a valid JSON array
-
-## Current Limitations
-
-- visual story generation is heuristic, not model-driven
-- both workflows are fixed to 6 scenes
-- Premiere workflow still uses one placeholder source copied six times
-- FCPXML workflow currently expects `.mp4` inputs with exact scene filenames
-- FCP scene style generation is heuristic
-- advertisement scene planning is heuristic
-- no audio analysis is performed beyond BPM math
-- no direct Premiere or Final Cut Pro API integration exists; both workflows are file-based
+- `director_style_v1.md` was removed because it is no longer used by the scripts.
+- The Premiere template logic now lives at [`docs/premiere_xml_logic.md`](/Users/ben/Git%20Projects/Content-Agents/docs/premiere_xml_logic.md).
+- For the full walkthrough, use [`docs/GENERATION_GUIDE.md`](/Users/ben/Git%20Projects/Content-Agents/docs/GENERATION_GUIDE.md).

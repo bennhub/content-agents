@@ -12,7 +12,7 @@ from typing import NamedTuple
 from xml.dom import minidom
 from xml.etree.ElementTree import Element, SubElement, tostring
 
-from orchestrate_splurge import (
+from orchestrate_premxml import (
     DEFAULT_BARS_PER_SCENE,
     DEFAULT_BEATS_PER_BAR,
     FRAME_HEIGHT,
@@ -27,7 +27,7 @@ from orchestrate_splurge import (
 FCPXML_VERSION = "1.5"
 FRAME_DURATION = Fraction(1001, 24000)
 EXPECTED_SCENE_FILES = tuple(f"scene_{index:02d}.mp4" for index in range(1, SCENE_COUNT + 1))
-DIRECTOR_SETTINGS_PATH = Path(__file__).with_name("director_settings.json")
+DIRECTOR_SETTINGS_PATH = Path(__file__).resolve().parent / "config" / "director_settings.json"
 SLOW_BPM_THRESHOLD = 100.0
 TARGET_MAX_SCENE_SECONDS = 5.0
 FRAME_SECONDS = float(FRAME_DURATION)
@@ -93,7 +93,7 @@ def clean_text(value: str) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate LTX prompts and a Final Cut Pro FCPXML timeline for a six-scene visual splurge."
+        description="Generate prompts and a Final Cut Pro FCPXML timeline for a six-scene content package."
     )
     parser.add_argument(
         "--workflow_type",

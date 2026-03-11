@@ -18,7 +18,7 @@ DEFAULT_BEATS_PER_BAR = 4
 DEFAULT_BARS_PER_SCENE = 2
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
-TEMPLATE_PATH = Path(__file__).with_name("premiere_xml_logic.md")
+TEMPLATE_PATH = Path(__file__).resolve().parent / "docs" / "premiere_xml_logic.md"
 PLACEHOLDER_MASTER_PATH = Path(__file__).with_name("placeholder_master.mp4")
 
 VISUAL_MOTIFS = [
@@ -62,7 +62,7 @@ class TimingSpec(NamedTuple):
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate LTX prompts and a Premiere/FCP7 XML timeline for a six-scene visual splurge."
+        description="Generate prompts and a Premiere/FCP7 XML timeline for a six-scene content package."
     )
     parser.add_argument("--lyrics", required=True, help="Raw lyrics text or a path to a text file.")
     parser.add_argument("--bpm", required=True, type=float, help="Song tempo in beats per minute.")
@@ -249,6 +249,7 @@ def write_outputs(
     output_dir = Path(project_name)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = output_dir.resolve()
+    project_label = output_dir.name
 
     if not PLACEHOLDER_MASTER_PATH.exists():
         raise SystemExit(
@@ -257,14 +258,14 @@ def write_outputs(
 
     scenes = split_into_scenes(lyrics, SCENE_COUNT)
     prompts_path = output_dir / "prompts.txt"
-    xml_path = output_dir / f"{project_name}.xml"
+    xml_path = output_dir / f"{project_label}.xml"
 
     for index in range(1, SCENE_COUNT + 1):
         scene_path = output_dir / f"scene_{index:02d}.mp4"
         shutil.copyfile(PLACEHOLDER_MASTER_PATH, scene_path)
 
     prompt_lines = [
-        f"Project: {project_name}",
+        f"Project: {project_label}",
         f"BPM: {bpm:.2f}",
         f"Time signature: {timing.beats_per_bar}/4",
         f"Bars per scene: {timing.bars_per_scene}",
@@ -288,7 +289,7 @@ def write_outputs(
         prompt_lines.append("")
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
-    xml_path.write_text(build_xml(project_name, output_dir, timing), encoding="utf-8")
+    xml_path.write_text(build_xml(project_label, output_dir, timing), encoding="utf-8")
 
     template_copy = output_dir / "template_reference.txt"
     template_copy.write_text(template.strip() + "\n", encoding="utf-8")
