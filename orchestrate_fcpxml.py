@@ -248,6 +248,121 @@ def load_ad_brief(path: Path) -> AdBrief:
     )
 
 
+def load_creative_brief(path: Path) -> list[dict]:
+    """
+    Parse a creative brief file into a list of scene dicts.
+
+    Each ## Scene XX block should contain:
+        Name: ...
+        Image prompt: ...
+        LTX prompt: ...
+
+    Returns a list of dicts with keys: name, image_prompt, ltx_prompt
+    """
+    if not path.exists() or not path.is_file():
+        raise SystemExit(f"Error: brief file not found: {path}")
+
+    text = path.read_text(encoding="utf-8")
+    scene_blocks = re.split(r"(?m)^##\s+Scene\s+\d+", text)
+    # First element is the Project Notes header — skip it
+    scene_blocks = [b.strip() for b in scene_blocks[1:] if b.strip()]
+
+    if not scene_blocks:
+        raise SystemExit(f"Error: no Scene blocks found in {path.name}. Add '## Scene 01', '## Scene 02', etc.")
+
+    scenes = []
+    for i, block in enumerate(scene_blocks, start=1):
+        def field(key: str) -> str:
+            match = re.search(rf"(?m)^{key}:\s*(.+?)(?=\n[A-Z]|\Z)", block, re.DOTALL)
+            return match.group(1).strip() if match else ""
+
+        image_prompt = field("Image prompt")
+        ltx_prompt = field("LTX prompt")
+        name = field("Name") or f"Scene {i:02d}"
+
+        if not image_prompt:
+            raise SystemExit(f"Error: Scene {i:02d} is missing 'Image prompt:' in {path.name}")
+        if not ltx_prompt:
+            raise SystemExit(f"Error: Scene {i:02d} is missing 'LTX prompt:' in {path.name}")
+
+        scenes.append({"name": name, "image_prompt": image_prompt, "ltx_prompt": ltx_prompt})
+
+    return scenes
+
+
+def write_creative_outputs(
+    project_name: str,
+    brief_file: str,
+    scenes: list[dict],
+    input_dir: Path,
+) -> tuple[Path, Path, list[dict]]:
+    """
+    Build prompts.txt + FCPXML for a creative brief.
+    Uses fixed 5-second scene timing. Auto-copies placeholder clips.
+    """
+    output_dir = Path(project_name)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_dir = output_dir.resolve()
+    project_label = output_dir.name
+
+    scene_count = len(scenes)
+    timing = build_ad_timing_spec()  # 5s per scene, no BPM needed
+
+    # Auto-create placeholder source clips for each scene
+    placeholder = Path(__file__).resolve().parent / "placeholder_master.mp4"
+    scene_sources: list[tuple[Path, float]] = []
+    for i in range(1, scene_count + 1):
+        dest = output_dir / f"scene_{i:02d}.mp4"
+        if not dest.exists():
+            if placeholder.exists():
+                shutil.copyfile(placeholder, dest)
+            else:
+                raise SystemExit(f"Error: placeholder_master.mp4 not found. Add any .mp4 to the repo root.")
+        duration = get_media_duration_seconds(dest)
+        scene_sources.append((dest, duration))
+
+    timeline_frame_counts = build_timeline_frame_counts(scene_sources, timing)
+    timeline_durations = [seconds_from_frames(fc) for fc in timeline_frame_counts]
+
+    # Write prompts.txt
+    prompts_path = output_dir / "prompts.txt"
+    prompt_lines = [
+        f"Project: {project_label}",
+        f"Workflow type: creative",
+        f"Scenes: {scene_count}",
+        f"Target scene length: {timing.seconds_per_scene:.2f}s",
+        f"Brief file: {brief_file}",
+        "",
+    ]
+    for i, (scene, duration) in enumerate(zip(scenes, timeline_durations), start=1):
+        prompt_lines.append(f"[Scene {i:02d}]")
+        prompt_lines.append(f"Name: {scene['name']}")
+        prompt_lines.append(f"Timeline duration: {duration:.2f}s")
+        prompt_lines.append(f"Image prompt: {scene['image_prompt']}")
+        prompt_lines.append(f"LTX prompt: {scene['ltx_prompt']}")
+        prompt_lines.append("")
+    prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
+
+    # Build FCPXML with a temporary override scene count
+    fcpxml_path = output_dir / f"{project_label}.fcpxml"
+    fcpxml_path.write_text(
+        build_fcpxml(project_label, output_dir, timing, scene_sources, timeline_frame_counts),
+        encoding="utf-8",
+    )
+
+    bundle_dicts = [
+        {
+            "scene_id": f"scene_{i:02d}",
+            "image_prompt": scene["image_prompt"],
+            "video_prompt": scene["ltx_prompt"],
+            "duration": timeline_durations[i - 1],
+            "style_tag": scene["name"],
+        }
+        for i, scene in enumerate(scenes, start=1)
+    ]
+    return prompts_path, fcpxml_path, bundle_dicts
+
+
 def resolve_music_video_inputs(args: argparse.Namespace) -> tuple[str, float, str]:
     if args.brief_file:
         return load_project_brief(Path(args.brief_file))

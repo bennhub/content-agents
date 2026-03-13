@@ -65,6 +65,7 @@ def resolve_workflow_path(workflow_type: str, override: str | None) -> Path:
     mapping = {
         "music_video": MV_WORKFLOW,
         "ad": AD_WORKFLOW,
+        "creative": MV_WORKFLOW,
     }
     path = mapping[workflow_type]
     if not path.exists():
@@ -110,7 +111,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--type", dest="workflow_type",
-        choices=["music_video", "ad"],
+        choices=["music_video", "ad", "creative"],
         required=True,
         help="Content type to generate.",
     )
@@ -201,6 +202,23 @@ def run_premiere(args: argparse.Namespace) -> list[dict]:
     return scene_bundles
 
 
+def run_creative(args: argparse.Namespace) -> list[dict]:
+    """Run the creative free-form workflow — prompts come directly from the brief."""
+    from orchestrate_fcpxml import load_creative_brief, write_creative_outputs
+
+    scenes = load_creative_brief(Path(args.brief_file))
+    prompts_path, fcpxml_path, scene_bundles = write_creative_outputs(
+        project_name=args.project_name,
+        brief_file=args.brief_file,
+        scenes=scenes,
+        input_dir=Path(args.input_dir),
+    )
+    print(f"[creative] Prompts : {prompts_path}")
+    print(f"[creative] FCPXML  : {fcpxml_path}")
+    print(f"[creative] Scenes  : {len(scene_bundles)}")
+    return scene_bundles
+
+
 def run_fcp(args: argparse.Namespace) -> list[dict]:
     """Run the Final Cut Pro orchestrator (music video + ads)."""
     from orchestrate_fcpxml import (
@@ -274,6 +292,8 @@ def push_to_comfy(
         download_output_file,
         extract_second_to_last_frame,
         upload_image_to_comfy,
+        clear_comfy_history,
+        free_comfy_memory,
     )
 
     node_clip_image = node_overrides.get("node_clip_image", "57:27")
@@ -287,6 +307,8 @@ def push_to_comfy(
     print(f"\n[comfy] Pushing {len(scene_bundles)} scenes -> {comfy_url}")
     print(f"[comfy] Nodes: image={node_clip_image}  motion={node_ltx_motion}  ksampler={node_ksampler}  noise={extra_noise_seeds}")
     print(f"[comfy] Last-frame/first-frame: first_frame_input_node={node_first_frame_input}")
+    clear_comfy_history(comfy_url=comfy_url)
+    free_comfy_memory(comfy_url)
 
     tmp_dir = _Path("output/_tmp_frames")
     tmp_dir.mkdir(parents=True, exist_ok=True)
@@ -350,6 +372,8 @@ def push_to_comfy(
                     else:
                         print(f"  [last-frame] WARNING: No video found in job output — next scene will use fallback image prompt.")
                         first_frame_filename = None
+                    clear_comfy_history(prompt_id, comfy_url)
+                    free_comfy_memory(comfy_url)
                 except Exception as extract_exc:
                     print(f"  [last-frame] WARNING: Frame extraction failed ({extract_exc}) — next scene will use fallback image prompt.")
                     first_frame_filename = None
@@ -363,6 +387,7 @@ def push_to_comfy(
         print(f"\n[comfy] Done with {errors} error(s). Check output above.")
     else:
         print("\n[comfy] All scenes queued.")
+    free_comfy_memory(comfy_url)
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +422,10 @@ def main() -> None:
     # 2. Run orchestrator(s) and collect scene bundles
     scene_bundles: list[dict] = []
 
-    if args.timeline == "prem":
+    if args.workflow_type == "creative":
+        scene_bundles = run_creative(args)
+
+    elif args.timeline == "prem":
         scene_bundles = run_premiere(args)
 
     elif args.timeline == "fcp":

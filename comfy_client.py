@@ -143,6 +143,26 @@ def extract_second_to_last_frame(video_path: Path, output_image_path: Path) -> P
     return output_image_path
 
 
+def clear_comfy_history(prompt_id: str | None = None, comfy_url: str = "http://127.0.0.1:8188") -> None:
+    """Delete a specific job (or all history) from ComfyUI to free memory."""
+    try:
+        payload = {"delete": [prompt_id]} if prompt_id else {"clear": True}
+        requests.post(f"{comfy_url}/history", json=payload, timeout=10)
+        msg = f"Cleared history for {prompt_id}" if prompt_id else "Cleared all ComfyUI history"
+        print(f"[comfy_client] {msg}")
+    except Exception as exc:
+        print(f"[comfy_client] Warning: could not clear history: {exc}")
+
+
+def free_comfy_memory(comfy_url: str = "http://127.0.0.1:8188") -> None:
+    """Ask ComfyUI to release cached memory between scenes."""
+    try:
+        requests.post(f"{comfy_url}/free", json={"unload_models": False, "free_memory": True}, timeout=10)
+        print(f"[comfy_client] ComfyUI memory freed.")
+    except Exception as exc:
+        print(f"[comfy_client] Warning: could not free memory: {exc}")
+
+
 def upload_image_to_comfy(image_path: Path, comfy_url: str = "http://127.0.0.1:8188") -> str:
     """
     Upload an image to ComfyUI's input directory.

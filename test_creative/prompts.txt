@@ -1,0 +1,17 @@
+Project: test_creative
+Workflow type: creative
+Scenes: 2
+Target scene length: 5.00s
+Brief file: briefs/creative_brief.md
+
+[Scene 01]
+Name: Opening Shot
+Timeline duration: 5.00s
+Image prompt: A lone figure standing on a rain-soaked rooftop at night, city lights below, dense fog rolling in. Hard backlight creating a silhouette. Dark noir palette, deep shadow, electric blue from the city below.
+LTX prompt: 4.71-second cinematic shot. Camera slowly cranes down toward the figure. Rain falls gently. Subject stands still, coat moving slightly in the wind. Mood: tense, mysterious. No warping, no morphing, no face drift, no text.
+
+[Scene 02]
+Name: Interior Close-Up
+Timeline duration: 5.00s
+Image prompt: Extreme close-up of a hand placing a key on a worn wooden table. Warm tungsten light from the left. Shallow depth of field, dark background, dust particles in the light beam.
+LTX prompt: 4.71-second cinematic shot. Camera holds still. Hand slowly slides the key forward then withdraws. Mood: deliberate, quiet tension. No warping, no morphing, no text.
