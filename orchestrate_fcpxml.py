@@ -450,21 +450,14 @@ def build_nano_banana_prompt(
     timeline_duration: float,
 ) -> str:
     action = infer_subject_action(scene_text, scene_number)
-    anchor = infer_scene_anchor(scene_text, scene_number, blueprint)
-    lyric_focus = clean_text(scene_text)
+    emotion = blueprint.visual_arc[min(scene_number - 1, len(blueprint.visual_arc) - 1)]
     return (
-        f"A single strong frame from a {timeline_duration:.2f}-second R&B / hip-hop music video scene. "
+        f"Cinematic still frame. R&B music video. "
         f"{blueprint.protagonist}, inside {blueprint.setting}, {action}. "
-        f"The image centers on {anchor}. "
-        f"Wardrobe: {blueprint.wardrobe}. "
-        f"Atmosphere: {blueprint.atmosphere}. "
         f"Lighting: {scene_style['lighting']}. "
         f"Color palette: {scene_style['palette']}. "
-        f"Camera angle: {scene_style['camera']}. "
-        f"Emotion: {blueprint.visual_arc[min(scene_number - 1, len(blueprint.visual_arc) - 1)]}, intimate, mature, nocturnal, emotionally relieved. "
-        f"Make it feel visually specific, cinematic, believable, and easy for an image model to interpret. "
-        f"No text, no subtitles, no logos, no crowd, no club scene. "
-        f'Lyric inspiration: "{lyric_focus}".'
+        f"Mood: {emotion}. "
+        f"No text, no logos, no crowd."
     )
 
 
@@ -511,16 +504,12 @@ def build_ltx_motion_prompt(
     timeline_duration: float,
 ) -> str:
     motion_phrase = infer_motion_phrase(scene_text, scene_number)
-    environment_motion = infer_environment_motion(scene_text, blueprint)
     return (
-        f"{timeline_duration:.2f}-second cinematic music video shot. "
-        f"Start from the generated image and animate it naturally. "
-        f"Camera motion: {scene_style['camera']}. "
-        f"Subject motion: {motion_phrase}. "
-        f"Environment motion: {environment_motion}. "
-        f"Keep the mood intimate, smooth, nocturnal, and emotionally relieved. "
-        f"Use realistic body motion, subtle breathing, natural fabric and jewelry movement, consistent face and hands. "
-        f"No warping, no flicker, no morphing, no extra limbs, no face drift, no text, no subtitles."
+        f"{timeline_duration:.2f}-second cinematic shot. "
+        f"Camera: {scene_style['camera']}. "
+        f"Subject: {motion_phrase}. "
+        f"Mood: nocturnal, intimate, emotionally relieved. "
+        f"No warping, no morphing, no face drift, no text."
     )
 
 

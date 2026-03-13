@@ -13,7 +13,7 @@ from xml.etree.ElementTree import Element, SubElement, tostring
 
 FPS = 23.976
 TIMEBASE = 24
-SCENE_COUNT = 6
+SCENE_COUNT = 2
 DEFAULT_BEATS_PER_BAR = 4
 DEFAULT_BARS_PER_SCENE = 2
 FRAME_WIDTH = 1280

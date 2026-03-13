@@ -2,5 +2,8 @@
   "node_clip_image": "57:27",
   "node_ltx_motion": "267:266",
   "node_ksampler": "57:3",
-  "extra_noise_seeds": ["267:216", "267:237"]
+  "extra_noise_seeds": ["267:216", "267:237"],
+  "node_first_frame_input": "267:238",
+  "node_frame_length": "267:225",
+  "frame_length_override": 49
 }

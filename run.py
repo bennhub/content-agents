@@ -258,27 +258,66 @@ def push_to_comfy(
     node_overrides: dict,
 ) -> None:
     """
-    Send each scene bundle to ComfyUI for GPU rendering.
+    Send each scene bundle to ComfyUI for GPU rendering using last-frame/first-frame.
+
+    Scene 1: generates a starting image + video from scratch.
+    Scene 2+: extracts the 2nd-to-last frame from the previous video and uses it
+              as the first frame input, creating seamless clip-to-clip continuity.
 
     node_overrides: merged dict from _nodes.json config + any CLI --node_* flags.
     """
-    from comfy_client import send_to_comfy_headless
+    from pathlib import Path as _Path
+    from comfy_client import (
+        send_to_comfy_headless,
+        wait_for_job,
+        get_output_video_filename,
+        download_output_file,
+        extract_second_to_last_frame,
+        upload_image_to_comfy,
+    )
 
     node_clip_image = node_overrides.get("node_clip_image", "57:27")
     node_ltx_motion = node_overrides.get("node_ltx_motion")  # None = image-only workflow
     node_ksampler = node_overrides.get("node_ksampler", "57:3")
     extra_noise_seeds = node_overrides.get("extra_noise_seeds") or []
+    node_first_frame_input = node_overrides.get("node_first_frame_input", "267:238")
+    node_frame_length = node_overrides.get("node_frame_length")
+    frame_length_override = node_overrides.get("frame_length_override")
 
     print(f"\n[comfy] Pushing {len(scene_bundles)} scenes -> {comfy_url}")
     print(f"[comfy] Nodes: image={node_clip_image}  motion={node_ltx_motion}  ksampler={node_ksampler}  noise={extra_noise_seeds}")
+    print(f"[comfy] Last-frame/first-frame: first_frame_input_node={node_first_frame_input}")
+
+    tmp_dir = _Path("output/_tmp_frames")
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+
     errors = 0
-    for bundle in scene_bundles:
+    first_frame_filename: str | None = None  # Set after scene 1 completes
+    prev_image_prompt: str = ""              # Fallback if frame extraction fails
+
+    for i, bundle in enumerate(scene_bundles):
         scene_id = bundle["scene_id"]
         style = bundle["style_tag"]
-        print(f"  {scene_id}  [{style}]")
+        is_first_scene = (i == 0)
+        print(f"\n  [{i+1}/{len(scene_bundles)}] {scene_id}  [{style}]")
+
+        if not is_first_scene:
+            if first_frame_filename:
+                print(f"  [last-frame] Using extracted frame: {first_frame_filename}")
+            else:
+                print(f"  [last-frame] Frame extraction failed — falling back to scene 1 image prompt.")
+
         try:
+            # Scene 2+: use extracted frame if available, otherwise fall back to scene 1's prompt
+            if is_first_scene:
+                image_prompt = bundle["image_prompt"]
+            elif first_frame_filename:
+                image_prompt = ""  # LoadImage node handles the visual — skip SD3
+            else:
+                image_prompt = prev_image_prompt  # Fallback: reuse scene 1 prompt
+
             prompt_id = send_to_comfy_headless(
-                image_prompt=bundle["image_prompt"],
+                image_prompt=image_prompt,
                 video_prompt=bundle["video_prompt"],
                 workflow_path=str(workflow_path),
                 comfy_url=comfy_url,
@@ -286,11 +325,39 @@ def push_to_comfy(
                 node_ltx_motion=node_ltx_motion,
                 node_ksampler=node_ksampler,
                 extra_noise_seeds=extra_noise_seeds,
+                first_frame_filename=first_frame_filename if not is_first_scene else None,
+                node_first_frame_input=node_first_frame_input,
+                node_frame_length=node_frame_length,
+                frame_length_override=frame_length_override,
             )
             print(f"  {scene_id}  queued -> {prompt_id}")
+
+            if is_first_scene:
+                prev_image_prompt = bundle["image_prompt"]
+
+            # Wait for completion and extract the last frame for the next scene
+            if node_ltx_motion is not None and i < len(scene_bundles) - 1:
+                print(f"  Waiting for {scene_id} to finish before extracting last frame...")
+                try:
+                    history = wait_for_job(prompt_id, comfy_url)
+                    video_filename = get_output_video_filename(history)
+                    if video_filename:
+                        video_path = download_output_file(video_filename, comfy_url, tmp_dir / f"{scene_id}.mp4")
+                        frame_path = tmp_dir / f"{scene_id}_last_frame.png"
+                        extract_second_to_last_frame(video_path, frame_path)
+                        first_frame_filename = upload_image_to_comfy(frame_path, comfy_url)
+                        print(f"  [last-frame] Ready for next scene: {first_frame_filename}")
+                    else:
+                        print(f"  [last-frame] WARNING: No video found in job output — next scene will use fallback image prompt.")
+                        first_frame_filename = None
+                except Exception as extract_exc:
+                    print(f"  [last-frame] WARNING: Frame extraction failed ({extract_exc}) — next scene will use fallback image prompt.")
+                    first_frame_filename = None
+
         except Exception as exc:
             print(f"  {scene_id}  ERROR  — {exc}", file=sys.stderr)
             errors += 1
+            first_frame_filename = None
 
     if errors:
         print(f"\n[comfy] Done with {errors} error(s). Check output above.")

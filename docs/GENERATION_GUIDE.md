@@ -1,298 +1,170 @@
 # Generation Guide
 
-This guide explains the current repo flow after the reorganization.
-
 ## What Drives The Workflow
 
-The workflow is designed to be operated by a coding agent in the CLI, such as Codex or Claude Code.
+The workflow is designed to be operated by a coding agent in the CLI, such as Claude Code.
 
 That matters because the scripts are only one part of the system:
 
 - the agent reads the brief and repo state
 - the Python scripts run the generation logic
-- the outputs are then used in Nano Banana, LTX, Premiere, or Final Cut Pro
+- the outputs feed into ComfyUI (local GPU rendering) and Final Cut Pro
 
-So the project engine is:
+The project engine is:
 
 - AI coding agent
-- CLI workflow
-- Python scripts
-
-The scripts do not replace the overall orchestration layer by themselves.
+- CLI workflow (`run.py`)
+- Python generation scripts
+- ComfyUI for GPU rendering
 
 ## Repo Layout
 
-Use these folders consistently:
-
-- briefs: project briefs you edit before generation
-- config: reusable config files the scripts read
-- docs: guides, planning notes, and logic references
-- input_scenes: the six source clips for FCP generation
-- output: generated project folders
-
-## Why The Workflow Uses Six Scenes
-
-The current generator is scoped to 6 scenes on purpose.
-
-The main use case right now is short-form content:
-
-- short ads
-- short music video posts
-- promo-style social clips
-
-The intended rhythm is:
-
-- each scene is roughly 5 seconds
-- 6 scenes produces a package around 30 seconds total
-
-That keeps the workflow practical for fast content generation and testing. The six-scene setup is the current baseline, not the final limit. The project can expand to longer formats later once the workflow types and prompt systems are stable.
-
-## Shared Setup
-
-1. Open the repo:
-
-```bash
-cd "/Users/ben/Git Projects/Content-Agents"
+```
+content-agents/
+├── run.py                     ← single entry point for everything
+├── orchestrate_fcpxml.py      ← FCP timeline + prompt generation
+├── orchestrate_premxml.py     ← Premiere timeline + SCENE_COUNT constant
+├── comfy_client.py            ← ComfyUI API client (queue, poll, download, upload)
+├── briefs/
+│   ├── music_vid_input.md
+│   └── ad_project_input.md
+├── config/
+│   └── director_settings.json
+├── workflows/
+│   ├── mv_workflow.json           ← ComfyUI workflow (API format)
+│   └── mv_workflow_nodes.json     ← node ID config + render settings
+├── input_scenes/              ← placeholder source clips for FCP timeline
+└── output/                    ← generated project folders
+    └── _tmp_frames/           ← temporary extracted frames (last-frame pipeline)
 ```
 
-2. Check tools:
+## Scene Count
 
-```bash
-python3 --version
-ffprobe -version
+`SCENE_COUNT` is defined in `orchestrate_premxml.py` and imported by `orchestrate_fcpxml.py`.
+
+- **Current value: 2** — for fast development and testing
+- **Production value: 6** — for full 30-second packages
+
+Change it in one place:
+
+```python
+# orchestrate_premxml.py
+SCENE_COUNT = 2   # 2 for testing, 6 for production
 ```
 
-3. Put six source clips in `input_scenes/`:
+The input_scenes folder and all timeline outputs automatically scale with this number.
 
-```text
-input_scenes/
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
+## The Last-Frame / First-Frame Pipeline
+
+This is the core of the ComfyUI generation flow on this branch.
+
+### Why it exists
+
+Previously the pipeline generated N independent images and animated each one separately. The videos looked unrelated even with matching prompts because each image was generated from scratch.
+
+### How it works
+
+1. **Scene 1** runs the full pipeline: Lumina2 generates an image from the Nano Banana prompt → LTX-Video animates it
+2. `comfy_client.py` polls ComfyUI until scene 1 is complete (`/history/{prompt_id}`)
+3. The output video is downloaded from `/view?filename=...&subfolder=video`
+4. ffmpeg extracts the **2nd-to-last frame** from the video
+5. That frame is uploaded to ComfyUI via `/upload/image`
+6. **Scene 2** injects a `LoadImage` node dynamically into the workflow JSON and rewires node `267:238` (ResizeImageMaskNode) to pull from that frame instead of Lumina2's output
+7. LTX-Video picks up from that exact visual state — same character, same lighting, same room
+
+### What still runs on scene 2+
+
+Lumina2 still runs on scene 2 because it's baked into the workflow and can't be disabled via the API. Its output is ignored since `267:238` is rewired to use the LoadImage node instead. This wastes ~12 seconds of compute per scene.
+
+**Future optimization**: use a separate `mv_workflow_i2v.json` (image-to-video only, no Lumina2) for scene 2+ to cut render time roughly in half.
+
+### Frame injection in the workflow
+
+The injection happens inside `send_to_comfy_headless()` in `comfy_client.py`:
+
+```python
+# Adds a LoadImage node dynamically
+workflow["_first_frame_loader"] = {
+    "inputs": {"image": first_frame_filename, "upload": "image"},
+    "class_type": "LoadImage"
+}
+# Rewires the resize node to use it instead of the SD3/Lumina2 output
+workflow["267:238"]["inputs"]["input"] = ["_first_frame_loader", 0]
 ```
 
-Rules:
+The node ID `267:238` is configured in `workflows/mv_workflow_nodes.json` under `node_first_frame_input`.
 
-- the filenames must match exactly
-- the clips are copied into the generated project folder
-- if a clip is shorter than the target scene length, the FCP timeline uses the real clip length instead of stretching or looping it
+## Prompt Structure
 
-## Music Video Workflow
+Each scene gets two prompts:
 
-### Step 1: Fill Out The Brief
+**Nano Banana prompt** → injected into `57:27` (CLIPTextEncode) → drives Lumina2 image generation
 
-Edit [`briefs/music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/music_vid_input.md).
+- Used for scene 1 only in production
+- Scene 2+ sends empty string (image is the extracted last frame)
+- Kept short: subject + setting + action + lighting + palette + mood
 
-Required sections:
+**LTX motion prompt** → injected into `267:266` (PrimitiveStringMultiline) → drives LTX-Video animation
 
-- `BPM:`
-- `## Lyrics`
-- `## Creative Notes`
+- Used for every scene
+- Kept short: duration + camera + subject motion + mood + negatives
 
-### Step 2: Run The Generator
+## Render Speed Controls
 
-```bash
-python3 orchestrate_fcpxml.py \
-  --workflow_type music_video \
-  --brief_file briefs/music_vid_input.md \
-  --input_dir input_scenes \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name output/my_song
+Video frame length is overridden via `workflows/mv_workflow_nodes.json`:
+
+```json
+"node_frame_length": "267:225",
+"frame_length_override": 49
 ```
 
-### Step 3: Review The Output
+| `frame_length_override` | Duration | Use |
+|---|---|---|
+| `49` | ~2 seconds | Fast testing |
+| `97` | ~4 seconds | Mid-length review |
+| `121` | ~5 seconds | Production |
+| _(remove key)_ | workflow default | Use whatever ComfyUI has |
 
-This creates:
+## Music Video Workflow — Step By Step
 
-```text
-output/my_song/
-├── my_song.fcpxml
-├── prompts.txt
-├── director_settings.json
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
+### 1. Fill out the brief
+
+Edit `briefs/music_vid_input.md`. Required: `BPM:`, `## Lyrics`, `## Creative Notes`.
+
+### 2. Add input clips
+
+Put placeholder clips in `input_scenes/` named `scene_01.mp4`, `scene_02.mp4` (matching `SCENE_COUNT`).
+
+### 3. Start ComfyUI
+
+ComfyUI must be running at `http://127.0.0.1:8188` before running with `--comfy`.
+
+### 4. Run the pipeline
+
+```
+python run.py --type music_video --brief briefs/music_vid_input.md --project_name my_video --input_dir ./input_scenes --timeline fcp --comfy
 ```
 
-Review:
+### 5. Review output
 
-- `output/my_song/prompts.txt`
-- `output/my_song/director_settings.json`
+Check `output/my_video/prompts.txt` — verify scene prompts look right before a full production run.
 
-Check:
+### 6. Import into Final Cut Pro
 
-- the six scenes feel like one connected visual story
-- the `Shot card` is usable
-- the `Nano Banana prompt` is image-friendly
-- the `LTX prompt` is motion-focused
-
-### Step 4: Import Into Final Cut Pro
-
-Import:
-
-- `output/my_song/my_song.fcpxml`
-
-## Manual Music Video Mode
-
-If you do not want brief-driven scene styling, edit [`config/director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/config/director_settings.json) and run:
-
-```bash
-python3 orchestrate_fcpxml.py \
-  --workflow_type music_video \
-  --lyrics lyrics.txt \
-  --bpm 120 \
-  --input_dir input_scenes \
-  --beats_per_bar 4 \
-  --bars_per_scene 2 \
-  --project_name output/my_song
-```
-
-In this mode:
-
-- lyrics come from `--lyrics`
-- BPM comes from `--bpm`
-- scene style comes from `config/director_settings.json`
+File > Import XML > `output/my_video/my_video.fcpxml`
 
 ## Advertisement Workflow
 
-### Step 1: Fill Out The Brief
+Same flow as music video. Use `briefs/ad_project_input.md` and `--type ad --ad_style brand_spot`.
 
-Edit [`briefs/ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/ad_project_input.md).
-
-Required sections:
-
-- `## Product Name`
-- `## Audience`
-- `## Core Problem`
-- `## Value Proposition`
-- `## Offer Or CTA`
-- `## Creative Notes`
-
-Optional:
-
-- `## Visual References`
-
-### Step 2: Choose The Ad Style
-
-Pick one:
-
-- `brand_spot`
-- `lifestyle`
-- `ugc`
-
-### Step 3: Run The Generator
-
-Brand spot:
-
-```bash
-python3 orchestrate_fcpxml.py \
-  --workflow_type advertisement \
-  --ad_style brand_spot \
-  --brief_file briefs/ad_project_input.md \
-  --input_dir input_scenes \
-  --project_name output/my_ad
-```
-
-Lifestyle:
-
-```bash
-python3 orchestrate_fcpxml.py \
-  --workflow_type advertisement \
-  --ad_style lifestyle \
-  --brief_file briefs/ad_project_input.md \
-  --input_dir input_scenes \
-  --project_name output/my_ad
-```
-
-UGC:
-
-```bash
-python3 orchestrate_fcpxml.py \
-  --workflow_type advertisement \
-  --ad_style ugc \
-  --brief_file briefs/ad_project_input.md \
-  --input_dir input_scenes \
-  --project_name output/my_ad
-```
-
-### Step 4: Review The Output
-
-This creates:
-
-```text
-output/my_ad/
-├── my_ad.fcpxml
-├── prompts.txt
-├── director_settings.json
-├── scene_01.mp4
-├── scene_02.mp4
-├── scene_03.mp4
-├── scene_04.mp4
-├── scene_05.mp4
-└── scene_06.mp4
-```
-
-Review:
-
-- `output/my_ad/prompts.txt`
-- `output/my_ad/director_settings.json`
-
-Check:
-
-- the six scenes follow a clear ad arc
-- the ad style reads correctly
-- the prompts are usable for Nano Banana and LTX
-
-### Step 5: Import Into Final Cut Pro
-
-Import:
-
-- `output/my_ad/my_ad.fcpxml`
+Ad styles: `brand_spot`, `lifestyle`, `ugc`
 
 ## Common Problems
 
-### Missing Scene Clips
-
-If any `scene_01.mp4` through `scene_06.mp4` files are missing from `input_scenes/`, the script stops.
-
-### Music Video Brief Missing BPM
-
-If [`briefs/music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/music_vid_input.md) does not contain `BPM: <number>`, music-video mode stops.
-
-### Music Video Brief Missing Lyrics
-
-If [`briefs/music_vid_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/music_vid_input.md) does not contain `## Lyrics`, music-video mode stops.
-
-### Advertisement Brief Missing Product Sections
-
-If [`briefs/ad_project_input.md`](/Users/ben/Git%20Projects/Content-Agents/briefs/ad_project_input.md) is missing required sections, advertisement mode stops.
-
-### Manual JSON Mode Missing Config
-
-If [`config/director_settings.json`](/Users/ben/Git%20Projects/Content-Agents/config/director_settings.json) is missing or invalid, manual music-video mode stops.
-
-## Quick Version
-
-### Quick Music Video
-
-1. Put 6 clips in `input_scenes/`
-2. Fill out `briefs/music_vid_input.md`
-3. Run the music-video command
-4. Review `output/my_song/prompts.txt`
-5. Import `output/my_song/my_song.fcpxml` into Final Cut Pro
-
-### Quick Advertisement
-
-1. Put 6 clips in `input_scenes/`
-2. Fill out `briefs/ad_project_input.md`
-3. Choose `brand_spot`, `lifestyle`, or `ugc`
-4. Run the advertisement command
-5. Review `output/my_ad/prompts.txt`
-6. Import `output/my_ad/my_ad.fcpxml` into Final Cut Pro
+| Problem | Fix |
+|---|---|
+| Scene 2 looks nothing like scene 1 | Frame extraction failed — check terminal for `[last-frame] WARNING` and verify ComfyUI output folder has videos |
+| `No video found in job output` | Check node output keys printed in terminal, update `get_output_video_filename` search keys in `comfy_client.py` |
+| Missing scene clips | Copy `placeholder_master.mp4` to `input_scenes/scene_01.mp4` etc. |
+| ComfyUI not reachable | Start ComfyUI first |
+| Brief missing BPM | Add `BPM: 120` near top of music video brief |
