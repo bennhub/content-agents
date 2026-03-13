@@ -18,7 +18,6 @@ DEFAULT_BEATS_PER_BAR = 4
 DEFAULT_BARS_PER_SCENE = 2
 FRAME_WIDTH = 1280
 FRAME_HEIGHT = 720
-TEMPLATE_PATH = Path(__file__).resolve().parent / "docs" / "premiere_xml_logic.md"
 PLACEHOLDER_MASTER_PATH = Path(__file__).with_name("placeholder_master.mp4")
 
 VISUAL_MOTIFS = [
@@ -101,12 +100,6 @@ def build_timing_spec(bpm: float, beats_per_bar: int, bars_per_scene: int) -> Ti
     )
 
 
-def load_template() -> str:
-    if not TEMPLATE_PATH.exists():
-        raise FileNotFoundError(f"Missing XML template: {TEMPLATE_PATH}")
-    return TEMPLATE_PATH.read_text(encoding="utf-8")
-
-
 def load_lyrics(value: str) -> str:
     candidate = Path(value)
     if candidate.exists() and candidate.is_file():
@@ -153,7 +146,22 @@ def classify_energy(text: str) -> str:
     return "cinematic, pulse-driven urgency"
 
 
+def build_image_prompt(scene_text: str, scene_number: int) -> str:
+    """Static frame description for ComfyUI image generation (CLIP/image node)."""
+    motif = VISUAL_MOTIFS[(scene_number - 1) % len(VISUAL_MOTIFS)]
+    palette = PALETTES[(scene_number - 1) % len(PALETTES)]
+    emotion = EMOTIONS[(scene_number - 1) % len(EMOTIONS)]
+    sanitized = re.sub(r"\s+", " ", scene_text).strip()
+    return (
+        f"Cinematic still frame, scene {scene_number:02d}, {emotion} mood. "
+        f"{motif}, palette of {palette}, 720p wide shot, "
+        f"high detail, no text, no subtitles, no logos. "
+        f'Visual inspiration: "{sanitized}".'
+    )
+
+
 def build_prompt(scene_text: str, scene_number: int, bpm: float, timing: TimingSpec) -> str:
+    """Full LTX 2.3 motion prompt for ComfyUI video generation node."""
     motif = VISUAL_MOTIFS[(scene_number - 1) % len(VISUAL_MOTIFS)]
     palette = PALETTES[(scene_number - 1) % len(PALETTES)]
     emotion = EMOTIONS[(scene_number - 1) % len(EMOTIONS)]
@@ -220,7 +228,8 @@ def build_xml(project_name: str, output_dir: Path, timing: TimingSpec, scene_cou
         file_rate = SubElement(file_element, "rate")
         make_text_element(file_rate, "timebase", str(TIMEBASE))
         make_text_element(file_rate, "ntsc", "TRUE")
-        make_text_element(file_element, "pathurl", f"{clip_id}.mp4")
+        clip_abs_path = (output_dir / f"{clip_id}.mp4").resolve().as_uri()
+        make_text_element(file_element, "pathurl", clip_abs_path)
         media2 = SubElement(file_element, "media")
         video2 = SubElement(media2, "video")
         sample_characteristics2 = SubElement(video2, "samplecharacteristics")
@@ -243,9 +252,8 @@ def write_outputs(
     project_name: str,
     bpm: float,
     lyrics: str,
-    template: str,
     timing: TimingSpec,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, list[dict]]:
     output_dir = Path(project_name)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = output_dir.resolve()
@@ -272,33 +280,40 @@ def write_outputs(
         f"Beats per scene: {timing.beats_per_scene}",
         f"Scene length: {timing.seconds_per_scene:.2f}s",
         f"Frames per scene: {timing.frames_per_scene}",
-        f"Template source: {TEMPLATE_PATH.name}",
         "",
     ]
 
+    scene_bundles: list[dict] = []
     for index, scene_text in enumerate(scenes, start=1):
         beat_start = (index - 1) * timing.beats_per_scene
         beat_end = index * timing.beats_per_scene
         bar_start = (index - 1) * timing.bars_per_scene + 1
         bar_end = index * timing.bars_per_scene
+        image_prompt = build_image_prompt(scene_text, index)
+        video_prompt = build_prompt(scene_text, index, bpm, timing)
+        emotion = EMOTIONS[(index - 1) % len(EMOTIONS)]
         prompt_lines.append(f"[Scene {index:02d}]")
         prompt_lines.append(f"Lyric chunk: {scene_text}")
         prompt_lines.append(f"Bar window: {bar_start} -> {bar_end}")
         prompt_lines.append(f"Beat window: {beat_start:.2f} -> {beat_end:.2f}")
-        prompt_lines.append(fill(build_prompt(scene_text, index, bpm, timing), width=100))
+        prompt_lines.append(f"Image prompt: {image_prompt}")
+        prompt_lines.append(fill(f"Video prompt: {video_prompt}", width=100))
         prompt_lines.append("")
+        scene_bundles.append({
+            "scene_id": f"scene_{index:02d}",
+            "image_prompt": image_prompt,
+            "video_prompt": video_prompt,
+            "duration": timing.seconds_per_scene,
+            "style_tag": emotion,
+        })
 
     prompts_path.write_text("\n".join(prompt_lines).rstrip() + "\n", encoding="utf-8")
     xml_path.write_text(build_xml(project_label, output_dir, timing), encoding="utf-8")
-
-    template_copy = output_dir / "template_reference.txt"
-    template_copy.write_text(template.strip() + "\n", encoding="utf-8")
-    return prompts_path, xml_path
+    return prompts_path, xml_path, scene_bundles
 
 
 def main() -> None:
     args = parse_args()
-    template = load_template()
     lyrics = load_lyrics(args.lyrics)
     if not lyrics:
         raise SystemExit("Lyrics input is empty.")
@@ -310,7 +325,7 @@ def main() -> None:
         raise SystemExit("bars_per_scene must be greater than 0.")
 
     timing = build_timing_spec(args.bpm, args.beats_per_bar, args.bars_per_scene)
-    prompts_path, xml_path = write_outputs(args.project_name, args.bpm, lyrics, template, timing)
+    prompts_path, xml_path, _bundles = write_outputs(args.project_name, args.bpm, lyrics, timing)
     print(f"Wrote prompts: {prompts_path}")
     print(f"Wrote XML: {xml_path}")
 

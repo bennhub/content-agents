@@ -1,0 +1,6 @@
+{
+  "node_clip_image": "57:27",
+  "node_ltx_motion": "267:266",
+  "node_ksampler": "57:3",
+  "extra_noise_seeds": ["267:216", "267:237"]
+}

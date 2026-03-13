@@ -1,12 +1,28 @@
 __pycache__/
 *.pyc
+.DS_Store
+.claude/
 
+# Video files — ignore rendered outputs everywhere EXCEPT tracked assets
 *.mp4
 *.mov
 *.m4v
 *.avi
 *.mkv
 
+# Always track the placeholder clip used for timeline generation
+!placeholder_master.mp4
+
+# ComfyUI workflow JSONs — track all files in workflows/
+!workflows/
+!workflows/*.json
+
+# Ignore loose workflow JSONs at the repo root (moved to workflows/)
+workflow_api.json
+video_ltx2_3_i2v.json
+image_z_image_turbo.json
+
+# Project output directories (generated content, not source)
 demo_splurge/
 final_test/
 quick_test/
@@ -14,3 +30,8 @@ bpm_120_test/
 premiere_test/
 input_scenes/
 output/
+two_second_test/
+
+# ComfyUI render output staging
+comfy_output/
+renders/

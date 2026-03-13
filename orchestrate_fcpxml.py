@@ -918,7 +918,7 @@ def write_outputs(
     brief_file: str,
     creative_notes: str,
     ad_brief: AdBrief | None = None,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, list[dict]]:
     output_dir = Path(project_name)
     output_dir.mkdir(parents=True, exist_ok=True)
     output_dir = output_dir.resolve()
@@ -1045,7 +1045,17 @@ def write_outputs(
         build_fcpxml(project_label, output_dir, timing, scene_sources, timeline_frame_counts),
         encoding="utf-8",
     )
-    return prompts_path, fcpxml_path
+    bundle_dicts: list[dict] = [
+        {
+            "scene_id": f"scene_{index:02d}",
+            "image_prompt": bundle.nano_prompt,
+            "video_prompt": bundle.ltx_prompt,
+            "duration": timeline_durations[index - 1],
+            "style_tag": bundle.visual_style,
+        }
+        for index, bundle in enumerate(scene_bundles, start=1)
+    ]
+    return prompts_path, fcpxml_path, bundle_dicts
 
 
 def main() -> None:
@@ -1076,7 +1086,7 @@ def main() -> None:
         creative_notes = ad_brief.creative_notes
         timing = build_ad_timing_spec()
 
-    prompts_path, fcpxml_path = write_outputs(
+    prompts_path, fcpxml_path, _bundles = write_outputs(
         args.workflow_type,
         args.ad_style or "",
         args.project_name,
