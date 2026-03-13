@@ -22,6 +22,9 @@ workflow_api.json
 video_ltx2_3_i2v.json
 image_z_image_turbo.json
 
+# Briefs — contain personal/project-specific content
+briefs/
+
 # Project output directories (generated content, not source)
 demo_splurge/
 final_test/
